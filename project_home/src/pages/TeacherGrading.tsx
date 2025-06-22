@@ -188,6 +188,8 @@ export const TeacherGrading: FC = () => {
   const [grades, setGrades] = useState(mockStudents);
   const [isEditing, setIsEditing] = useState(false);
   const [tempGrades, setTempGrades] = useState(mockStudents);
+  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
 
   const availableModules = selectedMajor ? modulesByMajor[selectedMajor as keyof typeof modulesByMajor] || [] : [];
 
@@ -201,11 +203,30 @@ export const TeacherGrading: FC = () => {
     [tempWeights]
   );
 
+  // Check if all grades are filled
+  const areAllGradesFilled = useMemo(() => {
+    const gradesToCheck = isEditing ? tempGrades : grades;
+    return gradesToCheck.every(student => 
+      student.grades.control !== null && 
+      student.grades.project !== null && 
+      student.grades.finalExam !== null
+    );
+  }, [isEditing, tempGrades, grades]);
+
+  // Check if submission is allowed (weights = 100% and all grades filled)
+  const canSubmit = useMemo(() => {
+    const currentTotalWeight = isEditing ? tempTotalWeight : totalWeight;
+    return currentTotalWeight === 100 && areAllGradesFilled;
+  }, [isEditing, tempTotalWeight, totalWeight, areAllGradesFilled]);
+
   // Load grades and weights from localStorage when component mounts or when major/module changes
   useEffect(() => {
     if (selectedMajor && selectedModule) {
       const storageKey = `grades_${selectedMajor}_${selectedModule}`;
+      const submittedKey = `submitted_${selectedMajor}_${selectedModule}`;
       const savedData = localStorage.getItem(storageKey);
+      const submittedStatus = localStorage.getItem(submittedKey);
+      
       if (savedData) {
         try {
           const parsedData = JSON.parse(savedData);
@@ -223,6 +244,9 @@ export const TeacherGrading: FC = () => {
         setWeights({ control: 30, project: 20, finalExam: 50 });
         setTempWeights({ control: 30, project: 20, finalExam: 50 });
       }
+      
+      // Check if already submitted
+      setIsSubmitted(submittedStatus === 'true');
     }
   }, [selectedMajor, selectedModule]);
 
@@ -242,14 +266,17 @@ export const TeacherGrading: FC = () => {
     setSelectedMajor(majorId);
     setSelectedModule(""); // Reset module selection when major changes
     setIsEditing(false); // Exit edit mode when changing major
+    setIsSubmitted(false); // Reset submitted status
   };
 
   const handleModuleChange = (moduleId: string) => {
     setSelectedModule(moduleId);
     setIsEditing(false); // Exit edit mode when changing module
+    setIsSubmitted(false); // Reset submitted status
   };
 
   const handleWeightChange = (type: keyof typeof weights, value: string) => {
+    if (isSubmitted) return; // Prevent changes if submitted
     const numValue = value === "" ? 0 : parseInt(value, 10);
     if (!isNaN(numValue) && numValue >= 0 && numValue <= 100) {
       if (isEditing) {
@@ -265,6 +292,7 @@ export const TeacherGrading: FC = () => {
     type: "control" | "project" | "finalExam",
     value: string
   ) => {
+    if (isSubmitted) return; // Prevent changes if submitted
     const score =
       value === "" ? null : Math.min(Math.max(parseFloat(value), 0), 20);
     setTempGrades((prev) =>
@@ -277,6 +305,7 @@ export const TeacherGrading: FC = () => {
   };
 
   const handleEditClick = () => {
+    if (isSubmitted) return; // Prevent editing if submitted
     setIsEditing(true);
     setTempGrades([...grades]); // Copy current grades to temp
     setTempWeights({ ...weights }); // Copy current weights to temp
@@ -293,6 +322,24 @@ export const TeacherGrading: FC = () => {
     setWeights({ ...tempWeights });
     saveDataToStorage(tempGrades, tempWeights);
     setIsEditing(false);
+  };
+
+  const handleSubmitToAdmin = () => {
+    setShowSubmitConfirm(true);
+  };
+
+  const confirmSubmitToAdmin = () => {
+    setIsSubmitted(true);
+    setIsEditing(false);
+    if (selectedMajor && selectedModule) {
+      const submittedKey = `submitted_${selectedMajor}_${selectedModule}`;
+      localStorage.setItem(submittedKey, 'true');
+    }
+    setShowSubmitConfirm(false);
+  };
+
+  const cancelSubmitToAdmin = () => {
+    setShowSubmitConfirm(false);
   };
 
   const calculateFinalGrade = (g: {
@@ -408,7 +455,7 @@ export const TeacherGrading: FC = () => {
                   type="number"
                   value={isEditing ? tempWeights.control : weights.control}
                   onChange={(e) => handleWeightChange("control", e.target.value)}
-                  disabled={!isEditing}
+                  disabled={!isEditing || isSubmitted}
                   className="w-full input-style disabled:opacity-50 disabled:cursor-not-allowed"
                   placeholder="30"
                   min="0"
@@ -423,7 +470,7 @@ export const TeacherGrading: FC = () => {
                   type="number"
                   value={isEditing ? tempWeights.project : weights.project}
                   onChange={(e) => handleWeightChange("project", e.target.value)}
-                  disabled={!isEditing}
+                  disabled={!isEditing || isSubmitted}
                   className="w-full input-style disabled:opacity-50 disabled:cursor-not-allowed"
                   placeholder="20"
                   min="0"
@@ -440,7 +487,7 @@ export const TeacherGrading: FC = () => {
                   onChange={(e) =>
                     handleWeightChange("finalExam", e.target.value)
                   }
-                  disabled={!isEditing}
+                  disabled={!isEditing || isSubmitted}
                   className="w-full input-style disabled:opacity-50 disabled:cursor-not-allowed"
                   placeholder="50"
                   min="0"
@@ -460,6 +507,12 @@ export const TeacherGrading: FC = () => {
                 Weight distribution is valid (100%).
               </div>
             )}
+            {isEditing && !areAllGradesFilled && (
+              <div className="flex items-center text-orange-600 dark:text-orange-400">
+                <AlertTriangle size={16} className="mr-2" />
+                All student scores must be filled before submitting to administration.
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -473,11 +526,22 @@ export const TeacherGrading: FC = () => {
                 Student Grades - {availableModules.find(m => m.id === selectedModule)?.name}
               </h3>
               <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                {isEditing ? "Editing mode - Make changes and save" : "View and manage student grades"}
+                {isSubmitted 
+                  ? "Grades submitted to administration - No further changes allowed"
+                  : isEditing 
+                    ? "Editing mode - Make changes and save" 
+                    : "View and manage student grades"
+                }
               </p>
+              {isSubmitted && (
+                <div className="mt-2 flex items-center text-orange-600 dark:text-orange-400">
+                  <AlertTriangle size={16} className="mr-2" />
+                  <span className="text-sm font-medium">Submitted to Administration</span>
+                </div>
+              )}
             </div>
             <div className="flex gap-2">
-              {!isEditing ? (
+              {!isSubmitted && !isEditing && (
                 <button
                   onClick={handleEditClick}
                   className="inline-flex items-center px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
@@ -485,7 +549,8 @@ export const TeacherGrading: FC = () => {
                   <Edit size={16} className="mr-2" />
                   Edit
                 </button>
-              ) : (
+              )}
+              {!isSubmitted && isEditing && (
                 <>
                   <button
                     onClick={handleCancelEdit}
@@ -501,6 +566,14 @@ export const TeacherGrading: FC = () => {
                   >
                     <Check size={16} className="mr-2" />
                     Save
+                  </button>
+                  <button
+                    onClick={handleSubmitToAdmin}
+                    disabled={!canSubmit}
+                    className="inline-flex items-center px-3 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Save size={16} className="mr-2" />
+                    Submit to Administration
                   </button>
                 </>
               )}
@@ -530,7 +603,7 @@ export const TeacherGrading: FC = () => {
                         {student.name}
                       </td>
                       <td className="px-6 py-4">
-                        {isEditing ? (
+                        {isEditing && !isSubmitted ? (
                           <input
                             type="number"
                             step="0.5"
@@ -553,7 +626,7 @@ export const TeacherGrading: FC = () => {
                         )}
                       </td>
                       <td className="px-6 py-4">
-                        {isEditing ? (
+                        {isEditing && !isSubmitted ? (
                           <input
                             type="number"
                             step="0.5"
@@ -576,7 +649,7 @@ export const TeacherGrading: FC = () => {
                         )}
                       </td>
                       <td className="px-6 py-4">
-                        {isEditing ? (
+                        {isEditing && !isSubmitted ? (
                           <input
                             type="number"
                             step="0.5"
@@ -614,6 +687,38 @@ export const TeacherGrading: FC = () => {
                 })}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* Submit Confirmation Modal */}
+      {showSubmitConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
+            <div className="flex items-center mb-4">
+              <AlertTriangle className="h-6 w-6 text-red-600 mr-3" />
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                Confirm Submission
+              </h3>
+            </div>
+            <p className="text-gray-600 dark:text-gray-300 mb-6">
+              Are you sure you want to submit these grades to administration? 
+              <strong className="text-red-600 dark:text-red-400"> This action cannot be undone.</strong>
+            </p>
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={cancelSubmitToAdmin}
+                className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmSubmitToAdmin}
+                className="px-4 py-2 bg-red-600 border border-transparent rounded-md text-sm font-medium text-white hover:bg-red-700"
+              >
+                Submit to Administration
+              </button>
+            </div>
           </div>
         </div>
       )}
