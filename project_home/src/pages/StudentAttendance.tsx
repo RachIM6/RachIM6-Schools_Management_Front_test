@@ -4,10 +4,17 @@ import { FC, useState, useMemo, Fragment } from 'react';
 import { PageHeader } from '../components/ui/PageHeader';
 import { Check, X, AlertTriangle, CalendarDays, Book, CalendarCheck2, ChevronDown } from 'lucide-react';
 import { Disclosure, Transition } from '@headlessui/react';
+import { useStudent } from '../context/StudentContext';
+import { getMajorFromFiliereName } from '../utils/majorMapping';
+import { academicYears, semesters, getModuleInstancesByStudentMajor, getModuleById } from '../data/academicData';
 
 // --- UTILITY FUNCTION TO GENERATE REALISTIC DATA ---
-const generateRealisticAttendanceData = (year: string, semester: 'S1' | 'S2', courses: string[]) => {
-  const months = semester === 'S1' ? ['September', 'October', 'November', 'December'] : ['February', 'March', 'April', 'May'];
+const generateRealisticAttendanceData = (year: string, semester: string, courses: string[], studentName: string) => {
+  // Use semester name to determine months
+  const semObj = semesters.find(s => s.id === semester);
+  const months = semObj?.name === 'S1'
+    ? ['September', 'October', 'November', 'December']
+    : ['February', 'March', 'April', 'May'];
   const data = {};
 
   months.forEach((month, monthIndex) => {
@@ -15,17 +22,15 @@ const generateRealisticAttendanceData = (year: string, semester: 'S1' | 'S2', co
     const numSessions = 8; // Simulate ~2 sessions per week per month
     for (let i = 0; i < numSessions; i++) {
       const day = Math.floor(Math.random() * 28) + 1; // Random day 1-28
-      const date = new Date(`${month} ${day}, ${semester === 'S1' ? year.split('-')[0] : year.split('-')[1]}`).toISOString().split('T')[0];
+      const date = new Date(`${month} ${day}, ${semObj?.name === 'S1' ? year.split('-')[0] : year.split('-')[1]}`).toISOString().split('T')[0];
       const timeSlot = Math.random() > 0.5 ? '09:00 - 11:00' : '14:00 - 16:00';
       const course = courses[Math.floor(Math.random() * courses.length)];
-      
       // Randomize status: 90% Present, 8% Absent, 2% Justified
       const rand = Math.random();
       let status = 'Present';
       if (rand > 0.9) status = 'Absent';
       if (rand > 0.98) status = 'Justified';
-
-      data[month].push({ date, time: timeSlot, course, status });
+      data[month].push({ date, time: timeSlot, course, status, student: studentName });
     }
     // Sort by date within the month
     data[month].sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
@@ -33,20 +38,24 @@ const generateRealisticAttendanceData = (year: string, semester: 'S1' | 'S2', co
   return data;
 };
 
-// --- DEEPLY STRUCTURED MOCK DATA USING THE GENERATOR ---
-const mockAttendanceData = {
-  "2024-2025": {
-    "S2": generateRealisticAttendanceData("2024-2025", "S2", ["Advanced Algorithms", "Operating Systems", "Quantum Physics"]),
-  },
-  "2023-2024": {
-    "S1": generateRealisticAttendanceData("2023-2024", "S1", ["Linear Algebra", "Ethics in Technology", "Intro to Physics"]),
-    "S2": generateRealisticAttendanceData("2023-2024", "S2", ["Data Structures", "Calculus II", "Circuit Theory"]),
-  }
+// --- DYNAMIC ATTENDANCE DATA BASED ON ACTUAL MODULES ---
+const buildAttendanceData = (studentName: string, studentMajorId: string) => {
+  const attendanceData = {};
+  academicYears.forEach(year => {
+    attendanceData[year.name] = {};
+    const yearSemesters = semesters.filter(s => s.academicYearId === year.id);
+    yearSemesters.forEach(sem => {
+      // Get modules for this major in this semester
+      const moduleInstances = getModuleInstancesByStudentMajor(studentMajorId, sem.id);
+      const moduleNames = moduleInstances.map(inst => {
+        const mod = getModuleById(inst.moduleId);
+        return mod?.name || 'Unknown Module';
+      });
+      attendanceData[year.name][sem.name] = generateRealisticAttendanceData(year.name, sem.id, moduleNames, studentName);
+    });
+  });
+  return attendanceData;
 };
-
-type AcademicYear = keyof typeof mockAttendanceData;
-type Semester = keyof typeof mockAttendanceData[AcademicYear];
-type Month = keyof typeof mockAttendanceData[AcademicYear][Semester];
 
 const StatusBadge: FC<{ status: string }> = ({ status }) => {
   const styles = {
@@ -64,13 +73,17 @@ const StatusBadge: FC<{ status: string }> = ({ status }) => {
 };
 
 export const StudentAttendance: FC = () => {
-    const [activeSelection, setActiveSelection] = useState<{ year: AcademicYear | null; semester: Semester | null; month: Month | null }>({ year: null, semester: null, month: null });
+    const { student } = useStudent();
+    const studentName = student ? `${student.firstName} ${student.lastName}` : 'Hamza Ouadou';
+    const studentMajor = student?.filiereName ? getMajorFromFiliereName(student.filiereName) : null;
+    const attendanceData = useMemo(() => studentMajor ? buildAttendanceData(studentName, studentMajor.id) : {}, [studentName, studentMajor]);
+    const [activeSelection, setActiveSelection] = useState<{ year: string | null; semester: string | null; month: string | null }>({ year: null, semester: null, month: null });
   
     const displayedRecords = useMemo(() => {
         const { year, semester, month } = activeSelection;
         if (!year || !semester || !month) return [];
-        return mockAttendanceData[year]?.[semester]?.[month] || [];
-    }, [activeSelection]);
+        return attendanceData[year]?.[semester]?.[month] || [];
+    }, [activeSelection, attendanceData]);
 
     return (
         <div className="space-y-8">
@@ -78,7 +91,7 @@ export const StudentAttendance: FC = () => {
 
             <div className="w-full max-w-3xl mx-auto">
                 <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md">
-                    {Object.keys(mockAttendanceData).map((year, yearIndex) => (
+                    {Object.keys(attendanceData).map((year, yearIndex) => (
                         <Disclosure as="div" key={year}>
                             {({ open }) => (
                                 <div className={yearIndex > 0 ? "border-t border-gray-200 dark:border-gray-700" : ""}>
@@ -88,21 +101,21 @@ export const StudentAttendance: FC = () => {
                                 </Disclosure.Button>
                                 <Disclosure.Panel className="px-6 pb-4 pt-2 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
                                     <div className="space-y-4">
-                                        {Object.keys(mockAttendanceData[year as AcademicYear]).map(semester => (
+                                        {Object.keys(attendanceData[year]).map(semester => (
                                         <Disclosure as="div" key={semester}>
                                             {({ open: semesterOpen }) => (
                                                 <div>
-                                                    <Disclosure.Button onClick={() => setActiveSelection({ year: year as AcademicYear, semester: semester as Semester, month: null })} className={`w-full flex justify-between items-center text-left p-3 rounded-lg transition-colors ${activeSelection.semester === semester && activeSelection.year === year ? 'bg-blue-100 dark:bg-blue-900/70' : 'hover:bg-gray-200 dark:hover:bg-gray-700'}`}>
+                                                    <Disclosure.Button onClick={() => setActiveSelection({ year: year, semester: semester, month: null })} className={`w-full flex justify-between items-center text-left p-3 rounded-lg transition-colors ${activeSelection.semester === semester && activeSelection.year === year ? 'bg-blue-100 dark:bg-blue-900/70' : 'hover:bg-gray-200 dark:hover:bg-gray-700'}`}>
                                                         <span className="font-semibold flex items-center text-gray-800 dark:text-gray-200"><Book className="h-5 w-5 mr-3 text-gray-500 dark:text-gray-400"/>Semester {semester.substring(1)}</span>
                                                         <ChevronDown className={`${semesterOpen ? 'rotate-180' : ''} h-5 w-5 text-gray-500 transition-transform`} />
                                                     </Disclosure.Button>
                                                     <Transition as={Fragment} enter="transition duration-100 ease-out" enterFrom="transform -translate-y-2 opacity-0" enterTo="transform translate-y-0 opacity-100" leave="transition duration-75 ease-out" leaveFrom="transform translate-y-0 opacity-100" leaveTo="transform -translate-y-2 opacity-0">
                                                         <Disclosure.Panel className="pt-2 pl-6">
                                                             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-2">
-                                                                {Object.keys(mockAttendanceData[year as AcademicYear][semester as Semester]).map(month => (
+                                                                {Object.keys(attendanceData[year][semester]).map(month => (
                                                                     <button 
                                                                         key={month} 
-                                                                        onClick={() => setActiveSelection({ year: year as AcademicYear, semester: semester as Semester, month: month as Month })} 
+                                                                        onClick={() => setActiveSelection({ year: year, semester: semester, month: month })} 
                                                                         className={`w-full text-center p-2 rounded-lg transition-colors text-sm font-medium ${activeSelection.month === month && activeSelection.semester === semester && activeSelection.year === year ? 'bg-blue-600 text-white shadow' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'}`}
                                                                     >
                                                                         {month}
