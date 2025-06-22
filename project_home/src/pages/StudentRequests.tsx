@@ -6,10 +6,10 @@ import { NewRequestModal } from "../components/ui/NewRequestModal";
 import { PlusCircle, Eye } from "lucide-react";
 
 const mockRequests = [
-  { id: 4, type: "Demander une attestation de réussite", status: "Approved", date: "2024-06-10", resolutionDate: "2024-06-11" },
-  { id: 3, type: "Envoyer un justificatif d'absence", status: "Approved", date: "2024-05-28", resolutionDate: "2024-05-29" },
-  { id: 2, type: "Demander un relevé de notes", status: "Pending", date: "2024-05-20", resolutionDate: null },
-  { id: 1, type: "Demander une attestation de scolarité", status: "Rejected", date: "2024-05-15", resolutionDate: "2024-05-16" },
+  { id: 4, type: "Demander une attestation de réussite", status: "Approved", date: "2025-06-10", resolutionDate: "2025-06-11" },
+  { id: 3, type: "Envoyer un justificatif d'absence", status: "Approved", date: "2025-05-28", resolutionDate: "2025-05-29" },
+  { id: 2, type: "Demander un relevé de notes", status: "Pending", date: "2025-05-20", resolutionDate: null },
+  { id: 1, type: "Demander une attestation de scolarité", status: "Rejected", date: "2025-05-15", resolutionDate: "2025-05-16" },
 ];
 
 const getStatusChip = (status: string) => {
