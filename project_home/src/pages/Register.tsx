@@ -78,9 +78,9 @@ const validateContactInfo = (data: any) => {
   if (!data.emailAddress.trim()) {
     errors.emailAddress = "Email address is required";
   } else {
-    const emailRegex = /^[a-zA-Z0-9._%+-]+@gmail\.com$/;
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@emsi-etu\.ma$/;
     if (!emailRegex.test(data.emailAddress)) {
-      errors.emailAddress = "Email must be a valid Gmail address (@gmail.com)";
+      errors.emailAddress = "Email must be a valid EMSI student address (@emsi-etu.ma)";
     }
   }
   
@@ -533,7 +533,7 @@ export const Register: FC = () => {
             name="emailAddress"
             value={formData.emailAddress}
             onChange={handleChange}
-            pattern="[a-zA-Z0-9._%+-]+@gmail\.com$"
+            pattern="[a-zA-Z0-9._%+-]+@emsi-etu\.ma$"
             required
             className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white ${
               errors.emailAddress ? 'border-red-300 dark:border-red-600' : 'border-gray-300 dark:border-gray-700'
@@ -543,7 +543,7 @@ export const Register: FC = () => {
             <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.emailAddress}</p>
           )}
           <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-            Must be a valid Gmail address (@gmail.com)
+            Must be a valid EMSI student address (@emsi-etu.ma)
           </p>
         </div>
 

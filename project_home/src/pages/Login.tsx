@@ -65,8 +65,8 @@ const simulateLogin = (username: string, role: 'student' | 'teacher') => {
     const mockStudent = {
       keycloakId: "mock-student-id-123",
       email: `${username.toLowerCase()}@emsi-etu.ma`,
-      firstName: "Hamza",
-      lastName: "Ouadou",
+      firstName: username.charAt(0).toUpperCase() + username.slice(1).toLowerCase(),
+      lastName: "Student",
       username: username,
       filiereName: "Computer Science Engineering",
       academicStatus: 'ACTIVE',

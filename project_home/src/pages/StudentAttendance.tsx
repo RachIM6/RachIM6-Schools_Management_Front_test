@@ -79,7 +79,7 @@ const StatusBadge: FC<{ status: string }> = ({ status }) => {
 
 export const StudentAttendance: FC = () => {
     const { student } = useStudent();
-    const studentName = student ? `${student.firstName} ${student.lastName}` : 'Hamza Ouadou';
+    const studentName = student ? `${student.firstName} ${student.lastName}` : 'Student';
     const studentMajor = student?.filiereName ? getMajorFromFiliereName(student.filiereName) : null;
     const attendanceData = useMemo(() => studentMajor ? buildAttendanceData(studentName, studentMajor.id) : {}, [studentName, studentMajor]);
     const [activeSelection, setActiveSelection] = useState<{ year: string | null; semester: string | null; month: string | null }>({ year: null, semester: null, month: null });
