@@ -11,6 +11,7 @@ export interface TeacherProfile {
   firstName: string;
   lastName: string;
   username: string;
+  phoneNumber?: string;
   departmentName?: string;
   specializations: string[];
   profileComplete: boolean;
@@ -20,6 +21,7 @@ interface TeacherContextType {
   teacher: TeacherProfile | null;
   isLoading: boolean;
   isAuthenticated: boolean;
+  setTeacher: (teacher: TeacherProfile | null) => void;
   logout: () => void;
   // Login will be handled by the main AuthProvider, this context just holds state
 }
@@ -47,7 +49,7 @@ export function TeacherProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <TeacherContext.Provider value={{ teacher, isLoading, isAuthenticated: !!teacher, logout }}>
+    <TeacherContext.Provider value={{ teacher, isLoading, isAuthenticated: !!teacher, setTeacher, logout }}>
       {children}
     </TeacherContext.Provider>
   );

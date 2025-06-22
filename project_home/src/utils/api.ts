@@ -32,7 +32,7 @@ export async function fetchApi<T>(
   }
   
   // Retrieve token from localStorage for authenticated requests
-  const token = localStorage.getItem("student_token") || localStorage.getItem("admin_token");
+  const token = localStorage.getItem("student_token") || localStorage.getItem("admin_token") || localStorage.getItem("teacher_token");
   if (token) {
     requestHeaders["Authorization"] = `Bearer ${token}`;
   }

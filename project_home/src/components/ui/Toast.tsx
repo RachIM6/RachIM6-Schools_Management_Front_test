@@ -6,8 +6,9 @@ import {
   useState,
   useCallback,
   useEffect,
+  FC,
 } from "react";
-import { X, CheckCircle, AlertCircle, InfoIcon } from "lucide-react";
+import { X, CheckCircle, AlertCircle, InfoIcon, XCircle } from "lucide-react";
 
 // Toast Types
 export type ToastType = "success" | "error" | "info" | "warning";
@@ -141,3 +142,54 @@ function ToastContainer() {
     </div>
   );
 }
+
+interface ToastProps {
+  message: string;
+  type: 'success' | 'error';
+  isVisible: boolean;
+  onClose: () => void;
+}
+
+export const Toast: FC<ToastProps> = ({ message, type, isVisible, onClose }) => {
+  useEffect(() => {
+    if (isVisible) {
+      const timer = setTimeout(() => {
+        onClose();
+      }, 3000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [isVisible, onClose]);
+
+  if (!isVisible) return null;
+
+  const bgColor = type === 'success' ? 'bg-green-50 dark:bg-green-900' : 'bg-red-50 dark:bg-red-900';
+  const borderColor = type === 'success' ? 'border-green-200 dark:border-green-700' : 'border-red-200 dark:border-red-700';
+  const textColor = type === 'success' ? 'text-green-800 dark:text-green-200' : 'text-red-800 dark:text-red-200';
+  const iconColor = type === 'success' ? 'text-green-400' : 'text-red-400';
+
+  return (
+    <div className={`fixed top-4 right-4 z-50 max-w-sm w-full ${bgColor} border ${borderColor} rounded-lg shadow-lg`}>
+      <div className="flex items-start p-4">
+        <div className="flex-shrink-0">
+          {type === 'success' ? (
+            <CheckCircle className={`h-5 w-5 ${iconColor}`} />
+          ) : (
+            <XCircle className={`h-5 w-5 ${iconColor}`} />
+          )}
+        </div>
+        <div className="ml-3 flex-1">
+          <p className={`text-sm font-medium ${textColor}`}>{message}</p>
+        </div>
+        <div className="ml-4 flex-shrink-0">
+          <button
+            onClick={onClose}
+            className={`inline-flex ${textColor} hover:${textColor} focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-${type === 'success' ? 'green' : 'red'}-500`}
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
