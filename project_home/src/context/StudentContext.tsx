@@ -100,7 +100,7 @@ export function StudentProvider({ children }: { children: ReactNode }) {
                 postalCode: "20000",
                 filiereId: 101,
                 filiereName: "Computer Science Engineering",
-                scholarYear: 3,
+                scholarYear: 1,
                 semester: 1,
                 academicStatus: "ACTIVE",
                 profileComplete: true,
