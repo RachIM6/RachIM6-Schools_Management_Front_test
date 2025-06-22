@@ -38,7 +38,7 @@ const simulateLogin = (username: string, role: 'student' | 'teacher') => {
       scholarYear: 3,
       profileComplete: true,
     };
-    localStorage.setItem("auth_token", "fake-student-token-for-testing");
+    localStorage.setItem("student_token", "fake-student-token-for-testing");
     localStorage.setItem("student_profile", JSON.stringify(mockStudent));
   }
 };
