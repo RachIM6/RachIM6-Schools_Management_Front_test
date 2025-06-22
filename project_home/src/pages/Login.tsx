@@ -4,6 +4,7 @@ import { FC, useState } from "react";
 import { School } from "lucide-react";
 import { HomeFooter } from "../components/layout/HomeFooter";
 import { useRouter } from "next/navigation";
+import { isAnyEmailVerified, hasPendingRegistration, getPendingRegistration, clearPendingRegistration } from "../utils/emailVerification";
 
 // SIMULATED AUTHENTICATION SERVICE
 // This function mimics your backend's login logic for the prototype
@@ -66,6 +67,54 @@ export const Login: FC = () => {
           simulateLogin(username, 'teacher');
           router.push("/teacher/dashboard");
         } else {
+          // Check if this is a newly registered student who needs email verification
+          if (hasPendingRegistration(username.toLowerCase())) {
+            // Check if email is verified
+            if (!isAnyEmailVerified()) {
+              throw new Error("Please verify your email address before signing in. Check your inbox for the verification link.");
+            } else {
+              // Email is verified, complete the registration
+              const registrationData = getPendingRegistration();
+              if (registrationData) {
+                registrationData.isEmailVerified = true;
+                localStorage.setItem('pending_registration', JSON.stringify(registrationData));
+                
+                // Create student profile from registration data
+                const mockStudent = {
+                  keycloakId: "mock-student-id-123",
+                  email: registrationData.emailAddress,
+                  firstName: registrationData.firstName,
+                  lastName: registrationData.lastName,
+                  username: username,
+                  filiereName: registrationData.major || "Computer Science Engineering",
+                  academicStatus: 'ACTIVE',
+                  scholarYear: 3,
+                  profileComplete: true,
+                  // Add other registration data
+                  dateOfBirth: registrationData.dateOfBirth,
+                  gender: registrationData.gender,
+                  nationality: registrationData.nationality,
+                  phoneNumber: registrationData.phoneNumber,
+                  country: registrationData.country,
+                  streetAddress: registrationData.streetAddress,
+                  city: registrationData.city,
+                  stateOrProvince: registrationData.stateOrProvince,
+                  postalCode: registrationData.postalCode,
+                };
+                
+                localStorage.setItem("student_token", "fake-student-token-for-testing");
+                localStorage.setItem("student_profile", JSON.stringify(mockStudent));
+                
+                // Clear pending registration
+                clearPendingRegistration();
+                
+                router.push("/student/dashboard");
+                return;
+              }
+            }
+          }
+          
+          // Regular login for existing students
           simulateLogin(username, 'student');
           router.push("/student/dashboard");
         }

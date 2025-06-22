@@ -2,6 +2,7 @@ import { FC, useState } from "react";
 import { School, ArrowLeft, ArrowRight } from "lucide-react";
 import { HomeFooter } from "../components/layout/HomeFooter";
 import { useRouter } from "next/navigation";
+import { storeVerificationToken } from "../utils/emailVerification";
 
 // Registration Progress Component
 interface RegistrationProgressProps {
@@ -314,13 +315,46 @@ export const Register: FC = () => {
     setIsSubmitting(true);
 
     try {
-      // Simulate API call with random delay between 1-2 seconds
-      const delay = Math.random() * 1000 + 1000; // Random delay between 1000-2000ms
-      
-      await new Promise(resolve => setTimeout(resolve, delay));
+      // Send verification email
+      const response = await fetch('/api/auth/send-verification', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: formData.emailAddress,
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+        }),
+      });
 
-      // Simulate successful registration
-      setIsSuccess(true);
+      if (!response.ok) {
+        throw new Error('Failed to send verification email');
+      }
+
+      const result = await response.json();
+
+      if (result.success) {
+        // Store verification token using utility function
+        storeVerificationToken(formData.emailAddress, result.token);
+
+        // Store user data for later use (after email verification)
+        const userData = {
+          ...formData,
+          isEmailVerified: false,
+          registrationDate: new Date().toISOString(),
+        };
+        localStorage.setItem('pending_registration', JSON.stringify(userData));
+
+        // Simulate API call with random delay between 1-2 seconds
+        const delay = Math.random() * 1000 + 1000; // Random delay between 1000-2000ms
+        await new Promise(resolve => setTimeout(resolve, delay));
+
+        // Show success message
+        setIsSuccess(true);
+      } else {
+        throw new Error(result.error || 'Failed to send verification email');
+      }
     } catch (error) {
       console.error("Registration error:", error);
       setErrors({ error: error instanceof Error ? error.message : "An unknown error occurred" });
