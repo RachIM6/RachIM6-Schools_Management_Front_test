@@ -46,6 +46,7 @@ interface StudentContextType {
   login: (username: string, password: string) => Promise<void>;
   logout: () => void;
   refetchStudent: () => Promise<void>;
+  setStudent: (student: StudentProfile) => void;
 }
 
 const StudentContext = createContext<StudentContextType | undefined>(undefined);
@@ -139,6 +140,7 @@ export function StudentProvider({ children }: { children: ReactNode }) {
         login,
         logout,
         refetchStudent,
+        setStudent,
       }}
     >
       {children}
