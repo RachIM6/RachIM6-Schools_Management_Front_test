@@ -3,6 +3,9 @@
 import { FC, useState, useMemo } from "react";
 import { PageHeader } from "../components/ui/PageHeader";
 import { Download, CheckCircle, XCircle, ChevronDown, ChevronRight } from "lucide-react";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+import { useStudent } from "../context/StudentContext";
 
 // Type definitions
 interface ScoreDetail {
@@ -173,9 +176,11 @@ type AcademicYear = keyof typeof mockAcademicData;
 type Semester = "S1" | "S2";
 
 export const StudentGrades: FC = () => {
+  const { student } = useStudent();
   const [selectedYear, setSelectedYear] = useState<AcademicYear | "">("");
   const [selectedSemester, setSelectedSemester] = useState<Semester | "">("");
   const [expandedCourse, setExpandedCourse] = useState<string | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
 
   const handleYearChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const year = e.target.value as AcademicYear | "";
@@ -192,6 +197,108 @@ export const StudentGrades: FC = () => {
 
   const toggleCourseExpansion = (courseCode: string) => {
     setExpandedCourse(expandedCourse === courseCode ? null : courseCode);
+  };
+
+  const exportTranscript = () => {
+    if (!selectedYear || !selectedSemester || gradesToDisplay.length === 0) return;
+
+    setIsExporting(true);
+
+    try {
+      const doc = new jsPDF();
+      
+      // Header
+      doc.setFontSize(20);
+      doc.setFont("helvetica", "bold");
+      doc.text("ACADEMIC TRANSCRIPT", 105, 20, { align: "center" });
+      
+      // Student Info
+      doc.setFontSize(12);
+      doc.setFont("helvetica", "normal");
+      const studentName = student ? `${student.firstName} ${student.lastName}` : "Unknown Student";
+      const studentId = student?.keycloakId || "Unknown ID";
+      doc.text("Student Name: " + studentName, 20, 35);
+      doc.text("Student ID: " + studentId, 20, 42);
+      doc.text("Academic Year: " + selectedYear, 20, 49);
+      doc.text("Semester: " + selectedSemester, 20, 56);
+      doc.text("Date: " + new Date().toLocaleDateString(), 20, 63);
+      
+      // Table data
+      const tableData = gradesToDisplay.map(grade => [
+        grade.courseCode,
+        grade.courseName,
+        grade.teacher,
+        `${grade.score}/20`,
+        grade.grade,
+        grade.score >= 10 ? "Pass" : "Fail"
+      ]);
+
+      // Create table
+      autoTable(doc, {
+        head: [["Course Code", "Course Name", "Teacher", "Score", "Grade", "Status"]],
+        body: tableData,
+        startY: 75,
+        styles: {
+          fontSize: 10,
+          cellPadding: 3,
+        },
+        headStyles: {
+          fillColor: [41, 128, 185],
+          textColor: 255,
+          fontStyle: "bold",
+        },
+        alternateRowStyles: {
+          fillColor: [245, 245, 245],
+        },
+      });
+
+      // Detailed scores section
+      const finalY = (doc as any).lastAutoTable.finalY + 10;
+      doc.setFontSize(14);
+      doc.setFont("helvetica", "bold");
+      doc.text("Detailed Score Breakdown", 20, finalY);
+      
+      let currentY = finalY + 10;
+      
+      gradesToDisplay.forEach((grade, index) => {
+        if (currentY > 250) {
+          doc.addPage();
+          currentY = 20;
+        }
+        
+        doc.setFontSize(11);
+        doc.setFont("helvetica", "bold");
+        doc.text(`${grade.courseCode} - ${grade.courseName}`, 20, currentY);
+        currentY += 8;
+        
+        doc.setFontSize(9);
+        doc.setFont("helvetica", "normal");
+        doc.text(`Test: ${grade.details.test.score}/${grade.details.test.maxScore} (${grade.details.test.percentage}%)`, 25, currentY);
+        currentY += 5;
+        doc.text(`Project: ${grade.details.project.score}/${grade.details.project.maxScore} (${grade.details.project.percentage}%)`, 25, currentY);
+        currentY += 5;
+        doc.text(`Exam: ${grade.details.exam.score}/${grade.details.exam.maxScore} (${grade.details.exam.percentage}%)`, 25, currentY);
+        currentY += 10;
+      });
+
+      // Footer
+      const pageCount = doc.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFontSize(8);
+        doc.text(`Page ${i} of ${pageCount}`, 105, 290, { align: "center" });
+      }
+
+      // Download the PDF
+      const fileName = `transcript_${selectedYear}_${selectedSemester}_${new Date().toISOString().split('T')[0]}.pdf`;
+      doc.save(fileName);
+      
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+      alert("Error generating PDF. Please try again.");
+    } finally {
+      setIsExporting(false);
+    }
   };
   
   // Use useMemo to get the grades to display, this prevents recalculating on every render
@@ -239,11 +346,12 @@ export const StudentGrades: FC = () => {
           {/* Export Button (Conditional) */}
           <div className="md:text-right">
             <button 
-              disabled={gradesToDisplay.length === 0} 
+              disabled={gradesToDisplay.length === 0 || isExporting} 
+              onClick={exportTranscript}
               className="w-full md:w-auto inline-flex items-center justify-center px-4 py-2 border border-gray-300 dark:border-gray-600 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white dark:bg-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Download size={16} className="mr-2" />
-              Export Transcript
+              {isExporting ? "Generating..." : "Export Transcript"}
             </button>
           </div>
         </div>
