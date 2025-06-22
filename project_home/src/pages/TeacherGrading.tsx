@@ -492,7 +492,7 @@ export const TeacherGrading: FC = () => {
               disabled={totalWeight !== 100}
             >
               <Save size={16} className="mr-2" />
-              Submit All Grades
+              Save
             </button>
           </div>
         </div>
