@@ -2,20 +2,22 @@
 import { FC } from 'react';
 import { useTeacher } from '@/context/TeacherContext';
 import { PageHeader } from '@/components/ui/PageHeader';
-import { BookOpen, Users, Edit, UploadCloud, Calendar, Bell, FileText, CheckSquare, BarChart2 } from 'lucide-react';
+import { BookOpen, Users, Edit, Calendar, Bell, FileText, CheckSquare, BarChart2 } from 'lucide-react';
 import Link from 'next/link';
 
 const mockDashboardData = {
-    assignedModules: 3,
-    totalStudents: 85,
-    pendingGrades: 12,
+    assignedModules: 4,
+    totalStudents: 120,
+    pendingGrades: 8,
     upcomingClasses: [
         { time: '14:00 - 16:00', course: 'Operating Systems', location: 'Amphi A' },
         { time: '10:00 - 12:00', course: 'Advanced Algorithms', location: 'Lab C10' },
+        { time: '16:00 - 18:00', course: 'Database Systems', location: 'Room B201' },
     ],
     recentNotifications: [
-        { text: "Admin approved your justification for absence on June 12.", time: "1h ago" },
-        { text: "3 new student submissions for Project Alpha.", time: "5h ago" },
+        { text: "Admin approved your justification for absence on May 15.", time: "2h ago" },
+        { text: "5 new student submissions for Project Alpha.", time: "4h ago" },
+        { text: "Attendance reminder: Class starts in 30 minutes.", time: "1h ago" },
     ],
 };
 
@@ -37,11 +39,10 @@ export const TeacherDashboard: FC = () => {
                 description="Here's a summary of your activities and upcoming schedule."
             />
             {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md flex items-center"><BookOpen className="h-8 w-8 text-blue-500 mr-4"/><div className="flex-1"><p className="text-sm text-gray-500">Assigned Modules</p><p className="text-2xl font-bold">{mockDashboardData.assignedModules}</p></div></div>
                 <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md flex items-center"><Users className="h-8 w-8 text-green-500 mr-4"/><div className="flex-1"><p className="text-sm text-gray-500">Total Students</p><p className="text-2xl font-bold">{mockDashboardData.totalStudents}</p></div></div>
                 <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md flex items-center"><Edit className="h-8 w-8 text-yellow-500 mr-4"/><div className="flex-1"><p className="text-sm text-gray-500">Pending Grades</p><p className="text-2xl font-bold">{mockDashboardData.pendingGrades}</p></div></div>
-                <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md flex items-center"><UploadCloud className="h-8 w-8 text-purple-500 mr-4"/><div className="flex-1"><p className="text-sm text-gray-500">Resources Uploaded</p><p className="text-2xl font-bold">27</p></div></div>
             </div>
 
             {/* Main Content Grid */}
