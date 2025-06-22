@@ -46,4 +46,91 @@ export interface Teacher {
   specializations?: string[];
   isDepartmentHead?: boolean; // New field to handle extra permissions
 }
+
+// Academic structure types based on French rules
+export interface AcademicYear {
+  id: string;
+  name: string; // e.g., "2024-2025"
+  startDate: string;
+  endDate: string;
+  isActive: boolean;
+}
+
+export interface Semester {
+  id: string;
+  name: string; // e.g., "S1", "S2"
+  academicYearId: string;
+  startDate: string;
+  endDate: string;
+  isActive: boolean;
+}
+
+export interface Major {
+  id: string;
+  name: string; // e.g., "Computer Science Engineering"
+  code: string; // e.g., "CS"
+  description: string;
+  departmentId: string;
+}
+
+export interface Module {
+  id: string;
+  name: string; // e.g., "Advanced Algorithms"
+  code: string; // e.g., "CS301"
+  description: string;
+  credits: number;
+  majorId: string;
+  prerequisites?: string[];
+}
+
+export interface ModuleInstance {
+  id: string;
+  moduleId: string;
+  semesterId: string;
+  teacherId: string;
+  maxStudents: number;
+  currentStudents: number;
+  isActive: boolean;
+}
+
+export interface StudentProfile {
+  keycloakId: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  username: string;
+  filiereName: string;
+  academicStatus: 'ACTIVE' | 'SUSPENDED';
+  scholarYear: number;
+  profileComplete: boolean;
+  dateOfBirth?: string;
+  gender?: string;
+  nationality?: string;
+  phoneNumber?: string;
+  country?: string;
+  streetAddress?: string;
+  city?: string;
+  stateOrProvince?: string;
+  postalCode?: string;
+}
+
+export interface TeacherProfile {
+  keycloakId: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  username: string;
+  departmentName: string;
+  specializations: string[];
+  profileComplete: boolean;
+}
+
+export interface Admin {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  createdAt: string;
+}
+
 // --- END OF FILE: types.ts ---

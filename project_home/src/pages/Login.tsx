@@ -15,16 +15,50 @@ const simulateLogin = (username: string, role: 'student' | 'teacher') => {
   localStorage.removeItem("auth_token");
 
   if (role === 'teacher') {
-    const mockTeacher = {
-      keycloakId: "mock-prof-id-456",
-      email: `${username.toLowerCase()}@emsi.ma`,
-      firstName: "Mohamed",
-      lastName: "TABAA",
-      username: username,
-      departmentName: "Computer Science & Engineering",
-      specializations: ["Algorithms", "Theoretical CS", "Cryptography"],
-      profileComplete: true,
-    };
+    // Define different teacher profiles based on username
+    let mockTeacher;
+    
+    if (username.toLowerCase() === 'tabaa') {
+      // Mr. Mohamed TABAA's profile
+      mockTeacher = {
+        keycloakId: "teacher-tabaa",
+        email: "mohamed.tabaa@emsi.ma",
+        firstName: "Mohamed",
+        lastName: "TABAA",
+        username: username,
+        departmentName: "Computer Science & Engineering",
+        specializations: ["Software Engineering", "Web Development", "Database Systems"],
+        profileComplete: true,
+      };
+    } else if (username.toLowerCase() === 'turing') {
+      // Dr. Alan Turing's profile
+      mockTeacher = {
+        keycloakId: "teacher-turing",
+        email: "alan.turing@emsi.ma",
+        firstName: "Alan",
+        lastName: "Turing",
+        username: username,
+        departmentName: "Computer Science & Engineering",
+        specializations: ["Algorithms", "Theoretical CS", "Cryptography"],
+        profileComplete: true,
+      };
+    } else if (username.toLowerCase() === 'linus') {
+      // Dr. Linus Torvalds' profile
+      mockTeacher = {
+        keycloakId: "teacher-linus",
+        email: "linus.torvalds@emsi.ma",
+        firstName: "Linus",
+        lastName: "Torvalds",
+        username: username,
+        departmentName: "Computer Science & Engineering",
+        specializations: ["Operating Systems", "Software Engineering"],
+        profileComplete: true,
+      };
+    } else {
+      // This should not happen since we only allow specific teacher usernames
+      throw new Error("Invalid teacher username. Please use: tabaa, turing, or linus");
+    }
+    
     localStorage.setItem("auth_token", "fake-teacher-token-for-testing");
     localStorage.setItem("teacher_profile", JSON.stringify(mockTeacher));
   } else {
@@ -63,7 +97,12 @@ export const Login: FC = () => {
           throw new Error("Password cannot be empty.");
         }
         
-        if (username.toLowerCase().includes("prof")) {
+        if (username.toLowerCase() === "tabaa" || username.toLowerCase() === "turing" || username.toLowerCase() === "linus") {
+          // Special password validation for Mr. TABAA
+          if (username.toLowerCase() === "tabaa" && password !== "password123") {
+            throw new Error("Invalid password for Mr. TABAA's account. Please use 'password123'.");
+          }
+          
           simulateLogin(username, 'teacher');
           router.push("/teacher/dashboard");
         } else {
