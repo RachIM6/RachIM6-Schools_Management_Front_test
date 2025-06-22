@@ -4,6 +4,16 @@ import { FC, useState, useMemo, Fragment } from 'react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { ChevronDown, CalendarDays, Book, CalendarSearch, Users, FlaskConical, Hourglass, Building } from 'lucide-react';
 import { Disclosure, Transition } from '@headlessui/react';
+import { useTeacher } from '@/context/TeacherContext';
+import { 
+  academicYears, 
+  semesters, 
+  getAcademicYearById, 
+  getSemesterById,
+  getModuleInstancesByTeacher,
+  getModuleById,
+  getTeacherById
+} from '@/data/academicData';
 
 type Day = 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday';
 type EventType = 'Lecture' | 'Lab' | 'Tutorial' | 'Office Hours' | 'Meeting';
@@ -28,17 +38,46 @@ const eventPalettes: Record<EventType, string> = {
     'Meeting': 'bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-700/60 dark:text-gray-200 dark:border-gray-600',
 };
 
-const teacherCourses = {
-  'CS301': { title: 'Advanced Algorithms', filiere: 'CS Engineering' },
-  'CS305': { title: 'Operating Systems', filiere: 'CS Engineering' },
-  'PH210': { title: 'Quantum Physics', filiere: 'Applied Physics' },
+// Room assignments for different types of classes
+const roomAssignments = {
+  lecture: ['Amphi A', 'Amphi B', 'Room B201', 'Room B202', 'Room C101', 'Room C102'],
+  lab: ['Lab C10', 'Lab C5', 'Lab C8', 'PhysLab 1', 'PhysLab 2', 'Math Lab'],
+  tutorial: ['Room D4', 'Room D5', 'Room E1', 'Room E2', 'Study Hall 1', 'Study Hall 2']
 };
 
-const generateTeacherSemesterSchedule = (yearString: string, semester: 'S1' | 'S2') => {
+const generateTeacherSemesterSchedule = (semesterId: string, teacherId: string) => {
   const schedule: Record<string, Record<Day, ScheduleEvent[]>> = {};
+  const semester = getSemesterById(semesterId);
+  if (!semester) return {};
+
+  const academicYear = getAcademicYearById(semester.academicYearId);
+  if (!academicYear) return {};
+
+  // Get modules for this semester and teacher
+  const relevantInstances = getModuleInstancesByTeacher(teacherId).filter(instance => 
+    instance.semesterId === semesterId
+  );
+
+  // Create course schedule data
+  const courses = relevantInstances.map(instance => {
+    const module = getModuleById(instance.moduleId);
+    
+    if (!module) return null;
+
+    return {
+      title: module.name,
+      moduleCode: module.code,
+      credits: module.credits,
+      majorId: module.majorId
+    };
+  }).filter(Boolean);
+
+  // Generate 14 weeks of schedule
   const numWeeks = 14;
-  const year = parseInt(semester === 'S1' ? yearString.split('-')[0] : yearString.split('-')[1]);
-  const startDate = new Date(semester === 'S1' ? `${year}-09-04` : `${year}-01-29`);
+  
+  // Calculate start date based on semester
+  const year = parseInt(academicYear.name.split('-')[semester.name === 'S1' ? 0 : 1]);
+  const startDate = new Date(semester.name === 'S1' ? `${year}-09-02` : `${year}-02-03`);
 
   for (let i = 0; i < numWeeks; i++) {
     const weekStart = new Date(startDate);
@@ -52,31 +91,74 @@ const generateTeacherSemesterSchedule = (yearString: string, semester: 'S1' | 'S
     const weekLabel = `Week ${weekNumber.toString().padStart(2, '0')} : ${fromDate} - ${toDate}`;
     
     let weeklySchedule: Record<Day, ScheduleEvent[]> = { Monday: [], Tuesday: [], Wednesday: [], Thursday: [], Friday: [] };
-    if (i % 3 === 0) {
-      weeklySchedule.Monday.push({ start: 9, end: 11, ...teacherCourses.CS305, location: 'Amphi A', type: 'Lecture', color: eventPalettes.Lecture });
-      weeklySchedule.Wednesday.push({ start: 14, end: 16, ...teacherCourses.CS301, location: 'Room B201', type: 'Tutorial', color: eventPalettes.Tutorial });
-    } else if (i % 3 === 1) {
-      weeklySchedule.Tuesday.push({ start: 10, end: 13, ...teacherCourses.CS301, location: 'Lab C10', type: 'Lab', color: eventPalettes.Lab });
-      weeklySchedule.Thursday.push({ start: 14, end: 16, ...teacherCourses.PH210, location: 'PhysLab 2', type: 'Lecture', color: eventPalettes.Lecture });
-      weeklySchedule.Friday.push({ start: 15, end: 17, title: 'Office Hours', filiere: 'All Students', location: 'Office B-3', type: 'Office Hours', color: eventPalettes['Office Hours'] });
-    } else {
-      weeklySchedule.Monday.push({ start: 14, end: 16, ...teacherCourses.CS305, location: 'Amphi A', type: 'Lecture', color: eventPalettes.Lecture });
-      weeklySchedule.Tuesday.push({ start: 16, end: 17, title: 'Dept. Meeting', filiere: 'CS Dept.', location: 'Conf. Room 1', type: 'Meeting', color: eventPalettes.Meeting });
-    }
+    
+    // Distribute courses across the week
+    courses.forEach((course, index) => {
+      if (!course) return;
+
+      const availableDays: Day[] = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+      const dayIndex = index % availableDays.length;
+      const day = availableDays[dayIndex];
+
+      // All classes are lectures, same day every week
+      const classType: 'Lecture' = 'Lecture';
+      const duration = course.credits >= 6 ? 2 : 1.5;
+      
+      // Fixed start times based on day to avoid conflicts
+      const timeSlots = [9, 11, 13, 15, 17];
+      const startTime = timeSlots[dayIndex % timeSlots.length];
+
+      // Get appropriate room
+      const roomType = 'lecture';
+      const roomIndex = index % roomAssignments[roomType].length;
+      const location = roomAssignments[roomType][roomIndex];
+
+      const event: ScheduleEvent = {
+        start: startTime,
+        end: startTime + duration,
+        title: course.title,
+        filiere: course.majorId === 'major-cs' ? 'CS Engineering' : course.majorId === 'major-physics' ? 'Applied Physics' : 'Mathematics',
+        location,
+        type: classType,
+        color: eventPalettes[classType]
+      };
+
+      weeklySchedule[day].push(event);
+    });
     
     schedule[weekLabel] = weeklySchedule;
   }
   return schedule;
 };
 
-const mockTeacherScheduleData = {
-  "2024-2025": { "S2": generateTeacherSemesterSchedule("2024-2025", "S2") },
-  "2023-2024": { "S1": generateTeacherSemesterSchedule("2023-2024", "S1"), "S2": generateTeacherSemesterSchedule("2023-2024", "S2") },
+// Get all available semesters for a teacher
+const getAvailableTeacherSemesters = () => {
+  return semesters.map(semester => {
+    const academicYear = getAcademicYearById(semester.academicYearId);
+    return {
+      id: semester.id,
+      name: semester.name,
+      academicYearName: academicYear?.name || '',
+      isActive: semester.isActive,
+      startDate: semester.startDate,
+      endDate: semester.endDate
+    };
+  }).sort((a, b) => {
+    // Sort by academic year (newest first), then by semester
+    const yearComparison = b.academicYearName.localeCompare(a.academicYearName);
+    if (yearComparison !== 0) return yearComparison;
+    return a.name.localeCompare(b.name);
+  });
 };
 
-type AcademicYear = keyof typeof mockTeacherScheduleData;
-type Semester = keyof typeof mockTeacherScheduleData[AcademicYear];
-type Week = keyof typeof mockTeacherScheduleData[AcademicYear][Semester];
+// Get current semester
+const getCurrentTeacherSemester = () => {
+  return semesters.find(semester => semester.isActive);
+};
+
+type AcademicYear = string;
+type Semester = string;
+type Week = string;
 
 const eventIcons: Record<EventType, React.ReactNode> = {
     'Lecture': <Users size={12} />,
@@ -129,46 +211,131 @@ const ScheduleGrid: FC<{ weekLabel: string; schedule: Record<Day, ScheduleEvent[
 };
 
 export const TeacherSchedule: FC = () => {
-  const [activeSelection, setActiveSelection] = useState<{ year: AcademicYear | null; semester: Semester | null; week: Week | null }>({ year: null, semester: null, week: null });
+  const { teacher } = useTeacher();
+  const [activeSelection, setActiveSelection] = useState<{ semesterId: string | null; week: string | null }>({ 
+    semesterId: null, 
+    week: null 
+  });
 
+  // Get available semesters
+  const availableSemesters = useMemo(() => {
+    return getAvailableTeacherSemesters();
+  }, []);
+
+  // Get current semester
+  const currentSemester = useMemo(() => {
+    return getCurrentTeacherSemester();
+  }, []);
+
+  // Get schedule for selected semester
+  const semesterSchedule = useMemo(() => {
+    if (!activeSelection.semesterId || !teacher) return null;
+    return generateTeacherSemesterSchedule(activeSelection.semesterId, teacher.keycloakId);
+  }, [activeSelection.semesterId, teacher]);
+
+  // Get displayed schedule for selected week
   const displayedSchedule = useMemo(() => {
-    const { year, semester, week } = activeSelection;
-    if (!year || !semester || !week) return null;
-    return mockTeacherScheduleData[year]?.[semester]?.[week] || {};
-  }, [activeSelection]);
+    if (!semesterSchedule || !activeSelection.week) return null;
+    return semesterSchedule[activeSelection.week] || null;
+  }, [semesterSchedule, activeSelection.week]);
+
+  // Group semesters by academic year
+  const semestersByYear = useMemo(() => {
+    const grouped: Record<string, typeof availableSemesters> = {};
+    availableSemesters.forEach(semester => {
+      if (!grouped[semester.academicYearName]) {
+        grouped[semester.academicYearName] = [];
+      }
+      grouped[semester.academicYearName].push(semester);
+    });
+    return grouped;
+  }, [availableSemesters]);
+
+  // Show loading if teacher is not loaded
+  if (!teacher) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
-      <PageHeader title="My Teaching Schedule" description="Your weekly timetable for all lectures, labs, and office hours." />
+      <PageHeader 
+        title={`My Teaching Schedule`} 
+        description={`Welcome back, Prof. ${teacher.lastName}! Here's your weekly timetable for all lectures, labs, and office hours.`} 
+      />
 
       <div className="w-full max-w-3xl mx-auto">
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md">
-          {Object.keys(mockTeacherScheduleData).map((year, yearIndex) => (
-            <Disclosure as="div" key={year}>
+          {Object.keys(semestersByYear).map((academicYear, yearIndex) => (
+            <Disclosure as="div" key={academicYear}>
               {({ open }) => (
                 <div className={yearIndex > 0 ? "border-t border-gray-200 dark:border-gray-700" : ""}>
                   <Disclosure.Button className="flex w-full justify-between items-center px-6 py-4 text-left text-md font-medium text-blue-900 dark:text-blue-200 hover:bg-blue-50 dark:hover:bg-blue-900/50 focus:outline-none focus-visible:ring focus-visible:ring-blue-500 focus-visible:ring-opacity-75">
-                    <span className="flex items-center"><CalendarDays className="h-5 w-5 text-blue-500 mr-3"/>Academic Year {year}</span>
-                    <ChevronDown className={`${open ? 'rotate-180' : ''} h-5 w-5 text-blue-500 transition-transform`} />
+                    <span className="flex items-center">
+                      <CalendarDays className="h-5 w-5 text-blue-500 mr-3"/>
+                      Academic Year {academicYear}
+                      {currentSemester && semestersByYear[academicYear].some(sem => sem.id === currentSemester.id) && (
+                        <span className="ml-2 px-2 py-1 text-xs bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded-full">
+                          Current
+                        </span>
+                      )}
+                    </span>
+                    <ChevronDown className={`${open ? 'rotate-180 transform' : ''} h-5 w-5 text-blue-500 transition-transform`} />
                   </Disclosure.Button>
                   <Disclosure.Panel className="px-6 pb-4 pt-2 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
                     <div className="space-y-4">
-                      {Object.keys(mockTeacherScheduleData[year as AcademicYear]).map(semester => (
-                        <Disclosure as="div" key={semester}>
+                      {semestersByYear[academicYear].map(semester => (
+                        <Disclosure as="div" key={semester.id}>
                           {({ open: semesterOpen }) => (
                             <div>
-                              <Disclosure.Button onClick={() => setActiveSelection({ year: year as AcademicYear, semester: semester as Semester, week: null })} className={`w-full flex justify-between items-center text-left p-3 rounded-lg transition-colors ${activeSelection.semester === semester && activeSelection.year === year ? 'bg-blue-100 dark:bg-blue-900/70' : 'hover:bg-gray-200 dark:hover:bg-gray-700'}`}>
-                                <span className="font-semibold flex items-center text-gray-800 dark:text-gray-200"><Book className="h-5 w-5 mr-3 text-gray-500 dark:text-gray-400"/>Semester {semester.substring(1)}</span>
+                              <Disclosure.Button 
+                                onClick={() => setActiveSelection({ semesterId: semester.id, week: null })} 
+                                className={`w-full flex justify-between items-center text-left p-3 rounded-lg transition-colors ${
+                                  activeSelection.semesterId === semester.id ? 'bg-blue-100 dark:bg-blue-900/70' : 'hover:bg-gray-200 dark:hover:bg-gray-700'
+                                }`}
+                              >
+                                <span className="font-semibold flex items-center text-gray-800 dark:text-gray-200">
+                                  <Book className="h-5 w-5 mr-3 text-gray-500 dark:text-gray-400"/>
+                                  Semester {semester.name.substring(1)}
+                                  {semester.isActive && (
+                                    <span className="ml-2 px-2 py-1 text-xs bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded-full">
+                                      Active
+                                    </span>
+                                  )}
+                                </span>
                                 <ChevronDown className={`${semesterOpen ? 'rotate-180' : ''} h-5 w-5 text-gray-500 transition-transform`} />
                               </Disclosure.Button>
-                              <Transition as={Fragment} enter="transition duration-100 ease-out" enterFrom="transform -translate-y-2 opacity-0" enterTo="transform translate-y-0 opacity-100" leave="transition duration-75 ease-out" leaveFrom="transform translate-y-0 opacity-100" leaveTo="transform -translate-y-2 opacity-0">
+                              <Transition 
+                                as={Fragment} 
+                                enter="transition duration-100 ease-out" 
+                                enterFrom="transform -translate-y-2 opacity-0" 
+                                enterTo="transform translate-y-0 opacity-100" 
+                                leave="transition duration-75 ease-out" 
+                                leaveFrom="transform translate-y-0 opacity-100" 
+                                leaveTo="transform -translate-y-2 opacity-0"
+                              >
                                 <Disclosure.Panel className="pt-2 pl-6">
                                   <div className="space-y-2 mt-2 max-h-48 overflow-y-auto">
-                                    {Object.keys(mockTeacherScheduleData[year as AcademicYear][semester as Semester]).map(week => (
-                                      <button key={week} onClick={() => setActiveSelection({ year: year as AcademicYear, semester: semester as Semester, week: week as Week })} className={`w-full text-left p-2 pl-4 rounded-md transition-colors text-sm font-medium ${activeSelection.week === week && activeSelection.semester === semester && activeSelection.year === year ? 'bg-blue-600 text-white shadow' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'}`}>
-                                        Week: {week}
-                                      </button>
-                                    ))}
+                                    {(() => {
+                                      // Generate schedule for this specific semester
+                                      const semesterScheduleData = generateTeacherSemesterSchedule(semester.id, teacher.keycloakId);
+                                      return Object.keys(semesterScheduleData).map(week => (
+                                        <button 
+                                          key={week} 
+                                          onClick={() => setActiveSelection({ semesterId: semester.id, week })} 
+                                          className={`w-full text-left p-2 pl-4 rounded-md transition-colors text-sm font-medium ${
+                                            activeSelection.week === week && activeSelection.semesterId === semester.id 
+                                              ? 'bg-blue-600 text-white shadow' 
+                                              : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                                          }`}
+                                        >
+                                          {week}
+                                        </button>
+                                      ));
+                                    })()}
                                   </div>
                                 </Disclosure.Panel>
                               </Transition>
@@ -187,11 +354,21 @@ export const TeacherSchedule: FC = () => {
 
       {displayedSchedule ? (
         <ScheduleGrid weekLabel={activeSelection.week!} schedule={displayedSchedule} />
+      ) : activeSelection.semesterId ? (
+        <div className="text-center py-16 px-6 bg-white dark:bg-gray-800 rounded-lg shadow-md mt-8">
+          <CalendarSearch className="mx-auto h-12 w-12 text-gray-400"/>
+          <h3 className="mt-4 text-lg font-semibold text-gray-900 dark:text-white">No Schedule Available</h3>
+          <p className="mt-1 text-sm text-gray-500">
+            No schedule is available for the selected semester.
+          </p>
+        </div>
       ) : (
         <div className="text-center py-16 px-6 bg-white dark:bg-gray-800 rounded-lg shadow-md mt-8">
           <CalendarSearch className="mx-auto h-12 w-12 text-gray-400"/>
           <h3 className="mt-4 text-lg font-semibold text-gray-900 dark:text-white">Awaiting Selection</h3>
-          <p className="mt-1 text-sm text-gray-500">Please select a year, semester, and week to view a schedule.</p>
+          <p className="mt-1 text-sm text-gray-500">
+            Please select a semester and week to view your schedule.
+          </p>
         </div>
       )}
     </div>
