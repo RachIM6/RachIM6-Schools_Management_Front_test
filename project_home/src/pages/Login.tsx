@@ -62,6 +62,12 @@ const simulateLogin = (username: string, role: 'student' | 'teacher') => {
     localStorage.setItem("auth_token", "fake-teacher-token-for-testing");
     localStorage.setItem("teacher_profile", JSON.stringify(mockTeacher));
   } else {
+    // Calculate current scholar year based on academic year
+    // Assuming students start in 2022-2023 (Year 1), then 2023-2024 (Year 2), 2024-2025 (Year 3)
+    const currentYear = new Date().getFullYear();
+    const startYear = 2022; // Students started in 2022-2023
+    const scholarYear = Math.min(3, Math.max(1, currentYear - startYear + 1)); // Cap at 3 years, minimum 1
+
     const mockStudent = {
       keycloakId: "mock-student-id-123",
       email: `${username.toLowerCase()}@emsi-etu.ma`,
@@ -70,7 +76,7 @@ const simulateLogin = (username: string, role: 'student' | 'teacher') => {
       username: username,
       filiereName: "Computer Science Engineering",
       academicStatus: 'ACTIVE',
-      scholarYear: 3,
+      scholarYear: scholarYear,
       profileComplete: true,
     };
     localStorage.setItem("student_token", "fake-student-token-for-testing");
@@ -119,6 +125,11 @@ export const Login: FC = () => {
                 localStorage.setItem('pending_registration', JSON.stringify(registrationData));
                 
                 // Create student profile from registration data
+                // Calculate current scholar year based on academic year
+                const currentYear = new Date().getFullYear();
+                const startYear = 2022; // Students started in 2022-2023
+                const scholarYear = Math.min(3, Math.max(1, currentYear - startYear + 1)); // Cap at 3 years, minimum 1
+
                 const mockStudent = {
                   keycloakId: "mock-student-id-123",
                   email: registrationData.emailAddress,
@@ -127,7 +138,7 @@ export const Login: FC = () => {
                   username: username,
                   filiereName: registrationData.major || "Computer Science Engineering",
                   academicStatus: 'ACTIVE',
-                  scholarYear: 3,
+                  scholarYear: scholarYear,
                   profileComplete: true,
                   // Add other registration data
                   dateOfBirth: registrationData.dateOfBirth,

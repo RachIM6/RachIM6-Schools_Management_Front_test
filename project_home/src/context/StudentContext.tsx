@@ -82,6 +82,11 @@ export function StudentProvider({ children }: { children: ReactNode }) {
             console.log(`Simulating login for username: ${username}`);
             
             // Create a detailed mock student profile for the UI
+            // Calculate current scholar year based on academic year
+            const currentYear = new Date().getFullYear();
+            const startYear = 2022; // Students started in 2022-2023
+            const scholarYear = Math.min(3, Math.max(1, currentYear - startYear + 1)); // Cap at 3 years, minimum 1
+
             const mockStudent: StudentProfile = {
                 keycloakId: "mock-student-id-123",
                 email: "rachid.imourigue@emsi-etu.ma",
@@ -100,7 +105,7 @@ export function StudentProvider({ children }: { children: ReactNode }) {
                 postalCode: "20000",
                 filiereId: 101,
                 filiereName: "Computer Science Engineering",
-                scholarYear: 1,
+                scholarYear: scholarYear,
                 semester: 1,
                 academicStatus: "ACTIVE",
                 profileComplete: true,
