@@ -98,31 +98,31 @@ const scheduledSessions: Record<string, ScheduledSession[]> = {
 };
 
 const mockStudentListForSession: StudentAttendanceRecord[] = [
-  { id: "student-1", name: "Rachid IMOURIGUE", status: "PRESENT" },
-  { id: "student-2", name: "Mohamed HAJJI", status: "PRESENT" },
-  { id: "student-3", name: "Ayoub Marghad", status: "PRESENT" },
-  { id: "student-4", name: "Fatima Zahra", status: "PRESENT" },
-  { id: "student-5", name: "Yassine Alami", status: "PRESENT" },
-  { id: "student-6", name: "Laila Bensouda", status: "PRESENT" },
-  { id: "student-7", name: "Karim Idrissi", status: "PRESENT" },
-  { id: "student-8", name: "Nadia Tazi", status: "PRESENT" },
-  { id: "student-9", name: "Omar Benjelloun", status: "PRESENT" },
-  { id: "student-10", name: "Salma Bakkali", status: "PRESENT" },
-  { id: "student-11", name: "Mehdi Chraibi", status: "PRESENT" },
-  { id: "student-12", name: "Amina Fassi", status: "PRESENT" },
-  { id: "student-13", name: "Younes Berrada", status: "PRESENT" },
-  { id: "student-14", name: "Hajar Mansouri", status: "PRESENT" },
-  { id: "student-15", name: "Zakaria Bouali", status: "PRESENT" },
-  { id: "student-16", name: "Soukaina Alaoui", status: "PRESENT" },
-  { id: "student-17", name: "Hamza Bennani", status: "PRESENT" },
-  { id: "student-18", name: "Imane Chaoui", status: "PRESENT" },
-  { id: "student-19", name: "Youssef Lahrichi", status: "PRESENT" },
-  { id: "student-20", name: "Zineb Moussaoui", status: "PRESENT" },
-  { id: "student-21", name: "Adil Tahiri", status: "PRESENT" },
-  { id: "student-22", name: "Houda Ziani", status: "PRESENT" },
-  { id: "student-23", name: "Khalid Ouazzani", status: "PRESENT" },
-  { id: "student-24", name: "Samira Doukkali", status: "PRESENT" },
-  { id: "student-25", name: "Tarik El Amrani", status: "PRESENT" },
+  { id: "student-1", name: "Rachid IMOURIGUE", status: "ABSENT" },
+  { id: "student-2", name: "Mohamed HAJJI", status: "ABSENT" },
+  { id: "student-3", name: "Ayoub Marghad", status: "ABSENT" },
+  { id: "student-4", name: "Fatima Zahra", status: "ABSENT" },
+  { id: "student-5", name: "Yassine Alami", status: "ABSENT" },
+  { id: "student-6", name: "Laila Bensouda", status: "ABSENT" },
+  { id: "student-7", name: "Karim Idrissi", status: "ABSENT" },
+  { id: "student-8", name: "Nadia Tazi", status: "ABSENT" },
+  { id: "student-9", name: "Omar Benjelloun", status: "ABSENT" },
+  { id: "student-10", name: "Salma Bakkali", status: "ABSENT" },
+  { id: "student-11", name: "Mehdi Chraibi", status: "ABSENT" },
+  { id: "student-12", name: "Amina Fassi", status: "ABSENT" },
+  { id: "student-13", name: "Younes Berrada", status: "ABSENT" },
+  { id: "student-14", name: "Hajar Mansouri", status: "ABSENT" },
+  { id: "student-15", name: "Zakaria Bouali", status: "ABSENT" },
+  { id: "student-16", name: "Soukaina Alaoui", status: "ABSENT" },
+  { id: "student-17", name: "Hamza Bennani", status: "ABSENT" },
+  { id: "student-18", name: "Imane Chaoui", status: "ABSENT" },
+  { id: "student-19", name: "Youssef Lahrichi", status: "ABSENT" },
+  { id: "student-20", name: "Zineb Moussaoui", status: "ABSENT" },
+  { id: "student-21", name: "Adil Tahiri", status: "ABSENT" },
+  { id: "student-22", name: "Houda Ziani", status: "ABSENT" },
+  { id: "student-23", name: "Khalid Ouazzani", status: "ABSENT" },
+  { id: "student-24", name: "Samira Doukkali", status: "ABSENT" },
+  { id: "student-25", name: "Tarik El Amrani", status: "ABSENT" },
 ];
 
 export const TeacherAttendance: FC = () => {
@@ -340,6 +340,7 @@ export const TeacherAttendance: FC = () => {
                       colors:
                         "bg-green-100 text-green-800 dark:bg-green-900/70 dark:text-green-200",
                       active: "bg-green-500 text-white",
+                      disabled: "bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-500",
                     },
                     {
                       label: "Absent",
@@ -348,6 +349,7 @@ export const TeacherAttendance: FC = () => {
                       colors:
                         "bg-red-100 text-red-800 dark:bg-red-900/70 dark:text-red-200",
                       active: "bg-red-500 text-white",
+                      disabled: "bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-500",
                     },
                     {
                       label: "Late",
@@ -356,6 +358,7 @@ export const TeacherAttendance: FC = () => {
                       colors:
                         "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/70 dark:text-yellow-200",
                       active: "bg-yellow-500 text-white",
+                      disabled: "bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-500",
                     },
                     {
                       label: "Excused",
@@ -364,6 +367,7 @@ export const TeacherAttendance: FC = () => {
                       colors:
                         "bg-blue-100 text-blue-800 dark:bg-blue-900/70 dark:text-blue-200",
                       active: "bg-blue-500 text-white",
+                      disabled: "bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-500",
                     },
                   ].map((item) => (
                     <button
@@ -374,7 +378,7 @@ export const TeacherAttendance: FC = () => {
                       className={`flex items-center px-3 py-1.5 text-xs rounded-full transition-all ${
                         student.status === item.status
                           ? `${item.active} font-bold shadow-md`
-                          : `${item.colors} hover:opacity-100`
+                          : `${item.disabled} cursor-pointer hover:opacity-80`
                       }`}
                     >
                       {item.icon}{" "}
