@@ -33,9 +33,172 @@ const RegistrationProgress: FC<RegistrationProgressProps> = ({
   );
 };
 
+// Validation functions for each step
+const validatePersonalInfo = (data: any) => {
+  const errors: Record<string, string> = {};
+  
+  if (!data.firstName.trim()) {
+    errors.firstName = "First name is required";
+  } else if (data.firstName.trim().length < 2) {
+    errors.firstName = "First name must be at least 2 characters";
+  }
+  
+  if (!data.lastName.trim()) {
+    errors.lastName = "Last name is required";
+  } else if (data.lastName.trim().length < 2) {
+    errors.lastName = "Last name must be at least 2 characters";
+  }
+  
+  if (!data.dateOfBirth) {
+    errors.dateOfBirth = "Date of birth is required";
+  } else {
+    const birthDate = new Date(data.dateOfBirth);
+    const today = new Date();
+    const age = today.getFullYear() - birthDate.getFullYear();
+    if (age < 16) {
+      errors.dateOfBirth = "You must be at least 16 years old to register";
+    }
+  }
+  
+  if (!data.gender) {
+    errors.gender = "Gender is required";
+  }
+  
+  if (!data.nationality.trim()) {
+    errors.nationality = "Nationality is required";
+  }
+  
+  return errors;
+};
+
+const validateContactInfo = (data: any) => {
+  const errors: Record<string, string> = {};
+  
+  if (!data.emailAddress.trim()) {
+    errors.emailAddress = "Email address is required";
+  } else {
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@gmail\.com$/;
+    if (!emailRegex.test(data.emailAddress)) {
+      errors.emailAddress = "Email must be a valid Gmail address (@gmail.com)";
+    }
+  }
+  
+  if (!data.phoneNumber.trim()) {
+    errors.phoneNumber = "Phone number is required";
+  } else {
+    const phoneRegex = /^[+]?[0-9\s\-()]{7,20}$/;
+    if (!phoneRegex.test(data.phoneNumber)) {
+      errors.phoneNumber = "Please enter a valid phone number";
+    }
+  }
+  
+  if (!data.country.trim()) {
+    errors.country = "Country is required";
+  }
+  
+  if (!data.streetAddress.trim()) {
+    errors.streetAddress = "Street address is required";
+  }
+  
+  if (!data.city.trim()) {
+    errors.city = "City is required";
+  }
+  
+  if (!data.stateOrProvince.trim()) {
+    errors.stateOrProvince = "State/Province is required";
+  }
+  
+  if (!data.postalCode.trim()) {
+    errors.postalCode = "Postal code is required";
+  } else {
+    const postalRegex = /^[A-Za-z0-9\s\-]{3,20}$/;
+    if (!postalRegex.test(data.postalCode)) {
+      errors.postalCode = "Please enter a valid postal code";
+    }
+  }
+  
+  return errors;
+};
+
+const validateAccountInfo = (data: any) => {
+  const errors: Record<string, string> = {};
+  
+  if (!data.username.trim()) {
+    errors.username = "Username is required";
+  } else {
+    const usernameRegex = /^[a-zA-Z0-9._-]{3,50}$/;
+    if (!usernameRegex.test(data.username)) {
+      errors.username = "Username must be 3-50 characters with only letters, numbers, dots, underscores, and hyphens";
+    }
+  }
+  
+  if (!data.password) {
+    errors.password = "Password is required";
+  } else {
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#$%^&*]).{8,128}$/;
+    if (!passwordRegex.test(data.password)) {
+      errors.password = "Password must be 8-128 characters and include: uppercase letter, lowercase letter, number, and special character";
+    }
+  }
+  
+  if (!data.confirmPassword) {
+    errors.confirmPassword = "Please confirm your password";
+  } else if (data.password !== data.confirmPassword) {
+    errors.confirmPassword = "Passwords do not match";
+  }
+  
+  return errors;
+};
+
+const validateEducationalInfo = (data: any) => {
+  const errors: Record<string, string> = {};
+  
+  if (!data.institutionName.trim()) {
+    errors.institutionName = "Institution name is required";
+  }
+  
+  if (!data.major) {
+    errors.major = "Major/Field of study is required";
+  }
+  
+  if (!data.educationLevel) {
+    errors.educationLevel = "Education level is required";
+  }
+  
+  if (!data.institutionAddress.trim()) {
+    errors.institutionAddress = "Institution address is required";
+  }
+  
+  return errors;
+};
+
+const validateEmergencyContact = (data: any) => {
+  const errors: Record<string, string> = {};
+  
+  if (!data.emergencyContactName.trim()) {
+    errors.emergencyContactName = "Emergency contact name is required";
+  }
+  
+  if (!data.emergencyContactPhone.trim()) {
+    errors.emergencyContactPhone = "Emergency contact phone number is required";
+  } else {
+    const phoneRegex = /^[+]?[0-9\s\-()]{7,20}$/;
+    if (!phoneRegex.test(data.emergencyContactPhone)) {
+      errors.emergencyContactPhone = "Please enter a valid emergency contact phone number";
+    }
+  }
+  
+  if (!data.emergencyContactRelationship) {
+    errors.emergencyContactRelationship = "Emergency contact relationship is required";
+  }
+  
+  return errors;
+};
+
 export const Register: FC = () => {
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const router = useRouter();
 
   // Form state
@@ -76,12 +239,43 @@ export const Register: FC = () => {
 
   const totalSteps = 5;
 
+  const validateCurrentStep = () => {
+    let stepErrors: Record<string, string> = {};
+    
+    switch (step) {
+      case 1:
+        stepErrors = validatePersonalInfo(formData);
+        break;
+      case 2:
+        stepErrors = validateContactInfo(formData);
+        break;
+      case 3:
+        stepErrors = validateAccountInfo(formData);
+        break;
+      case 4:
+        stepErrors = validateEducationalInfo(formData);
+        break;
+      case 5:
+        stepErrors = validateEmergencyContact(formData);
+        break;
+      default:
+        stepErrors = {};
+    }
+    
+    setErrors(stepErrors);
+    return Object.keys(stepErrors).length === 0;
+  };
+
   const nextStep = () => {
-    setStep((prev) => Math.min(prev + 1, totalSteps));
+    if (validateCurrentStep()) {
+      setStep((prev) => Math.min(prev + 1, totalSteps));
+      setErrors({}); // Clear errors when moving to next step
+    }
   };
 
   const prevStep = () => {
     setStep((prev) => Math.max(prev - 1, 1));
+    setErrors({}); // Clear errors when going back
   };
 
   const handleChange = (
@@ -95,6 +289,27 @@ export const Register: FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate all steps before submission
+    const allErrors: Record<string, string> = {};
+    
+    // Validate each step
+    const personalErrors = validatePersonalInfo(formData);
+    const contactErrors = validateContactInfo(formData);
+    const accountErrors = validateAccountInfo(formData);
+    const educationalErrors = validateEducationalInfo(formData);
+    const emergencyErrors = validateEmergencyContact(formData);
+    
+    // Merge all errors
+    Object.assign(allErrors, personalErrors, contactErrors, accountErrors, educationalErrors, emergencyErrors);
+    
+    if (Object.keys(allErrors).length > 0) {
+      setErrors(allErrors);
+      // Scroll to the first error
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+    
     setIsSubmitting(true);
 
     try {
@@ -124,9 +339,7 @@ export const Register: FC = () => {
       }, 2000);
     } catch (error) {
       console.error("Registration error:", error);
-      alert(
-        error instanceof Error ? error.message : "An unknown error occurred"
-      );
+      setErrors({ error: error instanceof Error ? error.message : "An unknown error occurred" });
     } finally {
       setIsSubmitting(false);
     }
@@ -166,8 +379,13 @@ export const Register: FC = () => {
             value={formData.firstName}
             onChange={handleChange}
             required
-            className="mt-1 block w-full border border-gray-300 dark:border-gray-700 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white"
+            className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white ${
+              errors.firstName ? 'border-red-300 dark:border-red-600' : 'border-gray-300 dark:border-gray-700'
+            }`}
           />
+          {errors.firstName && (
+            <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.firstName}</p>
+          )}
         </div>
 
         <div>
@@ -184,8 +402,13 @@ export const Register: FC = () => {
             value={formData.lastName}
             onChange={handleChange}
             required
-            className="mt-1 block w-full border border-gray-300 dark:border-gray-700 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white"
+            className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white ${
+              errors.lastName ? 'border-red-300 dark:border-red-600' : 'border-gray-300 dark:border-gray-700'
+            }`}
           />
+          {errors.lastName && (
+            <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.lastName}</p>
+          )}
         </div>
       </div>
 
@@ -208,8 +431,13 @@ export const Register: FC = () => {
             return date.toISOString().split("T")[0];
           })()}
           required
-          className="mt-1 block w-full border border-gray-300 dark:border-gray-700 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white"
+          className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white ${
+            errors.dateOfBirth ? 'border-red-300 dark:border-red-600' : 'border-gray-300 dark:border-gray-700'
+          }`}
         />
+        {errors.dateOfBirth && (
+          <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.dateOfBirth}</p>
+        )}
         <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
           You must be at least 16 years old to register.
         </p>
@@ -227,12 +455,17 @@ export const Register: FC = () => {
           name="gender"
           value={formData.gender}
           onChange={handleChange}
-          className="mt-1 block w-full border border-gray-300 dark:border-gray-700 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white"
+          className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white ${
+            errors.gender ? 'border-red-300 dark:border-red-600' : 'border-gray-300 dark:border-gray-700'
+          }`}
         >
           <option value="">Select gender</option>
           <option value="MALE">Male</option>
           <option value="FEMALE">Female</option>
         </select>
+        {errors.gender && (
+          <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.gender}</p>
+        )}
       </div>
 
       <div>
@@ -248,8 +481,13 @@ export const Register: FC = () => {
           name="nationality"
           value={formData.nationality}
           onChange={handleChange}
-          className="mt-1 block w-full border border-gray-300 dark:border-gray-700 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white"
+          className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white ${
+            errors.nationality ? 'border-red-300 dark:border-red-600' : 'border-gray-300 dark:border-gray-700'
+          }`}
         />
+        {errors.nationality && (
+          <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.nationality}</p>
+        )}
       </div>
     </div>
   );
@@ -279,8 +517,13 @@ export const Register: FC = () => {
             onChange={handleChange}
             pattern="[a-zA-Z0-9._%+-]+@gmail\.com$"
             required
-            className="mt-1 block w-full border border-gray-300 dark:border-gray-700 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white"
+            className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white ${
+              errors.emailAddress ? 'border-red-300 dark:border-red-600' : 'border-gray-300 dark:border-gray-700'
+            }`}
           />
+          {errors.emailAddress && (
+            <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.emailAddress}</p>
+          )}
           <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
             Must be a valid Gmail address (@gmail.com)
           </p>
@@ -301,8 +544,13 @@ export const Register: FC = () => {
             onChange={handleChange}
             pattern="^[+]?[0-9\s\-()]{7,20}$"
             placeholder="+1234567890 or (123) 456-7890"
-            className="mt-1 block w-full border border-gray-300 dark:border-gray-700 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white"
+            className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white ${
+              errors.phoneNumber ? 'border-red-300 dark:border-red-600' : 'border-gray-300 dark:border-gray-700'
+            }`}
           />
+          {errors.phoneNumber && (
+            <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.phoneNumber}</p>
+          )}
         </div>
       </div>
 
@@ -319,8 +567,13 @@ export const Register: FC = () => {
           name="country"
           value={formData.country}
           onChange={handleChange}
-          className="mt-1 block w-full border border-gray-300 dark:border-gray-700 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white"
+          className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white ${
+            errors.country ? 'border-red-300 dark:border-red-600' : 'border-gray-300 dark:border-gray-700'
+          }`}
         />
+        {errors.country && (
+          <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.country}</p>
+        )}
       </div>
 
       <div>
@@ -336,8 +589,13 @@ export const Register: FC = () => {
           name="streetAddress"
           value={formData.streetAddress}
           onChange={handleChange}
-          className="mt-1 block w-full border border-gray-300 dark:border-gray-700 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white"
+          className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white ${
+            errors.streetAddress ? 'border-red-300 dark:border-red-600' : 'border-gray-300 dark:border-gray-700'
+          }`}
         />
+        {errors.streetAddress && (
+          <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.streetAddress}</p>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -354,8 +612,13 @@ export const Register: FC = () => {
             name="city"
             value={formData.city}
             onChange={handleChange}
-            className="mt-1 block w-full border border-gray-300 dark:border-gray-700 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white"
+            className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white ${
+              errors.city ? 'border-red-300 dark:border-red-600' : 'border-gray-300 dark:border-gray-700'
+            }`}
           />
+          {errors.city && (
+            <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.city}</p>
+          )}
         </div>
 
         <div>
@@ -371,8 +634,13 @@ export const Register: FC = () => {
             name="stateOrProvince"
             value={formData.stateOrProvince}
             onChange={handleChange}
-            className="mt-1 block w-full border border-gray-300 dark:border-gray-700 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white"
+            className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white ${
+              errors.stateOrProvince ? 'border-red-300 dark:border-red-600' : 'border-gray-300 dark:border-gray-700'
+            }`}
           />
+          {errors.stateOrProvince && (
+            <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.stateOrProvince}</p>
+          )}
         </div>
 
         <div>
@@ -389,8 +657,13 @@ export const Register: FC = () => {
             value={formData.postalCode}
             onChange={handleChange}
             pattern="^[A-Za-z0-9\s\-]{3,20}$"
-            className="mt-1 block w-full border border-gray-300 dark:border-gray-700 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white"
+            className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white ${
+              errors.postalCode ? 'border-red-300 dark:border-red-600' : 'border-gray-300 dark:border-gray-700'
+            }`}
           />
+          {errors.postalCode && (
+            <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.postalCode}</p>
+          )}
         </div>
       </div>
     </div>
@@ -420,8 +693,13 @@ export const Register: FC = () => {
           onChange={handleChange}
           pattern="^[a-zA-Z0-9._-]{3,50}$"
           required
-          className="mt-1 block w-full border border-gray-300 dark:border-gray-700 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white"
+          className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white ${
+            errors.username ? 'border-red-300 dark:border-red-600' : 'border-gray-300 dark:border-gray-700'
+          }`}
         />
+        {errors.username && (
+          <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.username}</p>
+        )}
         <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
           3-50 characters. Only letters, numbers, dots, underscores, and hyphens
           allowed.
@@ -441,10 +719,15 @@ export const Register: FC = () => {
           name="password"
           value={formData.password}
           onChange={handleChange}
-          pattern="^(?=.[a-z])(?=.[A-Z])(?=.[0-9])(?=.[!@#$%^&*]).{8,128}$"
+          pattern="^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#$%^&*]).{8,128}$"
           required
-          className="mt-1 block w-full border border-gray-300 dark:border-gray-700 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white"
+          className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white ${
+            errors.password ? 'border-red-300 dark:border-red-600' : 'border-gray-300 dark:border-gray-700'
+          }`}
         />
+        {errors.password && (
+          <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.password}</p>
+        )}
         <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
           Password must be 8-128 characters and include: uppercase letter,
           lowercase letter, number, and special character.
@@ -465,8 +748,13 @@ export const Register: FC = () => {
           value={formData.confirmPassword}
           onChange={handleChange}
           required
-          className="mt-1 block w-full border border-gray-300 dark:border-gray-700 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white"
+          className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white ${
+            errors.confirmPassword ? 'border-red-300 dark:border-red-600' : 'border-gray-300 dark:border-gray-700'
+          }`}
         />
+        {errors.confirmPassword && (
+          <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.confirmPassword}</p>
+        )}
       </div>
     </div>
   );
@@ -493,8 +781,13 @@ export const Register: FC = () => {
           name="institutionName"
           value={formData.institutionName}
           onChange={handleChange}
-          className="mt-1 block w-full border border-gray-300 dark:border-gray-700 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white"
+          className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white ${
+            errors.institutionName ? 'border-red-300 dark:border-red-600' : 'border-gray-300 dark:border-gray-700'
+          }`}
         />
+        {errors.institutionName && (
+          <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.institutionName}</p>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -510,7 +803,9 @@ export const Register: FC = () => {
             name="major"
             value={formData.major}
             onChange={handleChange}
-            className="mt-1 block w-full border border-gray-300 dark:border-gray-700 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white"
+            className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white ${
+              errors.major ? 'border-red-300 dark:border-red-600' : 'border-gray-300 dark:border-gray-700'
+            }`}
           >
             <option value="">Select major</option>
             <option value="COMPUTER_SCIENCE">Computer Science</option>
@@ -518,6 +813,9 @@ export const Register: FC = () => {
             <option value="BUSINESS">Business</option>
             <option value="OTHER">Other</option>
           </select>
+          {errors.major && (
+            <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.major}</p>
+          )}
         </div>
 
         <div>
@@ -532,7 +830,9 @@ export const Register: FC = () => {
             name="educationLevel"
             value={formData.educationLevel}
             onChange={handleChange}
-            className="mt-1 block w-full border border-gray-300 dark:border-gray-700 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white"
+            className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white ${
+              errors.educationLevel ? 'border-red-300 dark:border-red-600' : 'border-gray-300 dark:border-gray-700'
+            }`}
           >
             <option value="">Select level</option>
             <option value="BACHELOR">Bachelor</option>
@@ -540,6 +840,9 @@ export const Register: FC = () => {
             <option value="PHD">PhD</option>
             <option value="OTHER">Other</option>
           </select>
+          {errors.educationLevel && (
+            <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.educationLevel}</p>
+          )}
         </div>
       </div>
 
@@ -556,8 +859,13 @@ export const Register: FC = () => {
           name="institutionAddress"
           value={formData.institutionAddress}
           onChange={handleChange}
-          className="mt-1 block w-full border border-gray-300 dark:border-gray-700 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white"
+          className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white ${
+            errors.institutionAddress ? 'border-red-300 dark:border-red-600' : 'border-gray-300 dark:border-gray-700'
+          }`}
         />
+        {errors.institutionAddress && (
+          <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.institutionAddress}</p>
+        )}
       </div>
 
       <div>
@@ -601,8 +909,13 @@ export const Register: FC = () => {
           name="emergencyContactName"
           value={formData.emergencyContactName}
           onChange={handleChange}
-          className="mt-1 block w-full border border-gray-300 dark:border-gray-700 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white"
+          className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white ${
+            errors.emergencyContactName ? 'border-red-300 dark:border-red-600' : 'border-gray-300 dark:border-gray-700'
+          }`}
         />
+        {errors.emergencyContactName && (
+          <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.emergencyContactName}</p>
+        )}
       </div>
 
       <div>
@@ -620,8 +933,13 @@ export const Register: FC = () => {
           onChange={handleChange}
           pattern="^[+]?[0-9\s\-()]{7,20}$"
           placeholder="+1234567890 or (123) 456-7890"
-          className="mt-1 block w-full border border-gray-300 dark:border-gray-700 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white"
+          className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white ${
+            errors.emergencyContactPhone ? 'border-red-300 dark:border-red-600' : 'border-gray-300 dark:border-gray-700'
+          }`}
         />
+        {errors.emergencyContactPhone && (
+          <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.emergencyContactPhone}</p>
+        )}
       </div>
 
       <div>
@@ -636,7 +954,9 @@ export const Register: FC = () => {
           name="emergencyContactRelationship"
           value={formData.emergencyContactRelationship}
           onChange={handleChange}
-          className="mt-1 block w-full border border-gray-300 dark:border-gray-700 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white"
+          className={`mt-1 block w-full border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white ${
+            errors.emergencyContactRelationship ? 'border-red-300 dark:border-red-600' : 'border-gray-300 dark:border-gray-700'
+          }`}
         >
           <option value="">Select relationship</option>
           <option value="Parent">Parent</option>
@@ -646,6 +966,9 @@ export const Register: FC = () => {
           <option value="Friend">Friend</option>
           <option value="Other">Other</option>
         </select>
+        {errors.emergencyContactRelationship && (
+          <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.emergencyContactRelationship}</p>
+        )}
       </div>
     </div>
   );
