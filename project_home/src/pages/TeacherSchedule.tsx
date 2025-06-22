@@ -46,7 +46,10 @@ const generateTeacherSemesterSchedule = (yearString: string, semester: 'S1' | 'S
     const weekEnd = new Date(weekStart);
     weekEnd.setDate(weekEnd.getDate() + 4);
     
-    const weekLabel = `${weekStart.toLocaleDateString('en-US', { month: 'short', day: '2-digit' })} - ${weekEnd.toLocaleDateString('en-US', { day: '2-digit', year: 'numeric' })}`;
+    const weekNumber = i + 1;
+    const fromDate = weekStart.toLocaleDateString('en-US', { month: 'short' });
+    const toDate = weekEnd.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+    const weekLabel = `Week ${weekNumber.toString().padStart(2, '0')} : ${fromDate} - ${toDate}`;
     
     let weeklySchedule: Record<Day, ScheduleEvent[]> = { Monday: [], Tuesday: [], Wednesday: [], Thursday: [], Friday: [] };
     if (i % 3 === 0) {
