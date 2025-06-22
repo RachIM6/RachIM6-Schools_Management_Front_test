@@ -21,12 +21,81 @@ type StudentAttendanceRecord = {
   status: "PRESENT" | "ABSENT" | "LATE" | "EXCUSED";
 };
 
-// Mock data for the teacher's modules and the students in a selected class
-const mockTeacherModules = [
-  { id: "CS301", name: "Advanced Algorithms" },
-  { id: "CS305", name: "Operating Systems" },
-  { id: "PH210", name: "Quantum Physics" },
+// Define the shape of a scheduled session
+type ScheduledSession = {
+  id: string;
+  date: string;
+  time: string;
+  weekNumber: number;
+};
+
+// Mock data for majors and their modules
+const majors = [
+  { id: "CS", name: "Computer Science" },
+  { id: "ENG", name: "Engineering" },
+  { id: "BUS", name: "Business" },
+  { id: "PH", name: "Physics" },
 ];
+
+const modulesByMajor = {
+  CS: [
+    { id: "CS301", name: "Advanced Algorithms" },
+    { id: "CS305", name: "Operating Systems" },
+    { id: "CS302", name: "Database Systems" },
+    { id: "CS303", name: "Software Engineering" },
+  ],
+  ENG: [
+    { id: "ENG201", name: "Mechanical Engineering" },
+    { id: "ENG202", name: "Electrical Engineering" },
+    { id: "ENG203", name: "Civil Engineering" },
+  ],
+  BUS: [
+    { id: "BUS101", name: "Business Management" },
+    { id: "BUS102", name: "Marketing" },
+    { id: "BUS103", name: "Finance" },
+  ],
+  PH: [
+    { id: "PH210", name: "Quantum Physics" },
+    { id: "PH211", name: "Classical Mechanics" },
+    { id: "PH212", name: "Thermodynamics" },
+  ],
+};
+
+// Mock scheduled sessions organized by week
+const scheduledSessions: Record<string, ScheduledSession[]> = {
+  "CS301": [
+    { id: "1", date: "2024-01-15", time: "09:00", weekNumber: 1 },
+    { id: "2", date: "2024-01-22", time: "09:00", weekNumber: 2 },
+    { id: "3", date: "2024-01-29", time: "09:00", weekNumber: 3 },
+    { id: "4", date: "2024-02-05", time: "09:00", weekNumber: 4 },
+    { id: "5", date: "2024-02-12", time: "09:00", weekNumber: 5 },
+    { id: "6", date: "2024-02-19", time: "09:00", weekNumber: 6 },
+  ],
+  "CS305": [
+    { id: "1", date: "2024-01-16", time: "14:00", weekNumber: 1 },
+    { id: "2", date: "2024-01-23", time: "14:00", weekNumber: 2 },
+    { id: "3", date: "2024-01-30", time: "14:00", weekNumber: 3 },
+    { id: "4", date: "2024-02-06", time: "14:00", weekNumber: 4 },
+    { id: "5", date: "2024-02-13", time: "14:00", weekNumber: 5 },
+    { id: "6", date: "2024-02-20", time: "14:00", weekNumber: 6 },
+  ],
+  "CS302": [
+    { id: "1", date: "2024-01-17", time: "11:00", weekNumber: 1 },
+    { id: "2", date: "2024-01-24", time: "11:00", weekNumber: 2 },
+    { id: "3", date: "2024-01-31", time: "11:00", weekNumber: 3 },
+    { id: "4", date: "2024-02-07", time: "11:00", weekNumber: 4 },
+    { id: "5", date: "2024-02-14", time: "11:00", weekNumber: 5 },
+    { id: "6", date: "2024-02-21", time: "11:00", weekNumber: 6 },
+  ],
+  "CS303": [
+    { id: "1", date: "2024-01-18", time: "16:00", weekNumber: 1 },
+    { id: "2", date: "2024-01-25", time: "16:00", weekNumber: 2 },
+    { id: "3", date: "2024-02-01", time: "16:00", weekNumber: 3 },
+    { id: "4", date: "2024-02-08", time: "16:00", weekNumber: 4 },
+    { id: "5", date: "2024-02-15", time: "16:00", weekNumber: 5 },
+    { id: "6", date: "2024-02-22", time: "16:00", weekNumber: 6 },
+  ],
+};
 
 const mockStudentListForSession: StudentAttendanceRecord[] = [
   { id: "student-1", name: "Rachid IMOURIGUE", status: "PRESENT" },
@@ -57,15 +126,42 @@ const mockStudentListForSession: StudentAttendanceRecord[] = [
 ];
 
 export const TeacherAttendance: FC = () => {
-  const [selectedModule, setSelectedModule] = useState<string | null>(null);
-  const [selectedDate, setSelectedDate] = useState<string>(
-    new Date().toISOString().split("T")[0]
-  );
+  const [selectedMajor, setSelectedMajor] = useState("");
+  const [selectedModule, setSelectedModule] = useState("");
+  const [selectedSession, setSelectedSession] = useState("");
   const [students, setStudents] = useState<StudentAttendanceRecord[]>([]);
 
+  const availableModules = selectedMajor ? modulesByMajor[selectedMajor as keyof typeof modulesByMajor] || [] : [];
+  const availableSessions = selectedModule ? scheduledSessions[selectedModule] || [] : [];
+
+  // Group sessions by week
+  const sessionsByWeek = useMemo(() => {
+    const grouped: Record<number, ScheduledSession[]> = {};
+    availableSessions.forEach(session => {
+      if (!grouped[session.weekNumber]) {
+        grouped[session.weekNumber] = [];
+      }
+      grouped[session.weekNumber].push(session);
+    });
+    return grouped;
+  }, [availableSessions]);
+
+  const handleMajorChange = (majorId: string) => {
+    setSelectedMajor(majorId);
+    setSelectedModule(""); // Reset module selection
+    setSelectedSession(""); // Reset session selection
+    setStudents([]); // Clear students
+  };
+
+  const handleModuleChange = (moduleId: string) => {
+    setSelectedModule(moduleId);
+    setSelectedSession(""); // Reset session selection
+    setStudents([]); // Clear students
+  };
+
   const handleSessionSelect = () => {
-    if (selectedModule && selectedDate) {
-      // In a real app, you'd fetch students for this module/date. Here, we just load the mock list.
+    if (selectedModule && selectedSession) {
+      // In a real app, you'd fetch students for this module/session. Here, we just load the mock list.
       setStudents(mockStudentListForSession);
     }
   };
@@ -85,12 +181,24 @@ export const TeacherAttendance: FC = () => {
 
   const handleSubmitAttendance = () => {
     console.log("Submitting attendance sheet:", {
+      major: selectedMajor,
       module: selectedModule,
-      date: selectedDate,
+      session: selectedSession,
       records: students,
     });
     alert("Attendance sheet has been saved (simulated).");
   };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      weekday: 'short',
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
+  const selectedSessionData = availableSessions.find(s => s.id === selectedSession);
 
   return (
     <div className="space-y-6">
@@ -104,45 +212,89 @@ export const TeacherAttendance: FC = () => {
         <h3 className="text-lg font-semibold text-gray-800 dark:text-white">
           Select a Session
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+          {/* Major Selection */}
+          <div>
+            <label
+              htmlFor="major-select"
+              className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300"
+            >
+              Major
+            </label>
+            <select
+              id="major-select"
+              value={selectedMajor}
+              onChange={(e) => handleMajorChange(e.target.value)}
+              className="w-full input-style"
+            >
+              <option value="">-- Choose a major --</option>
+              {majors.map((major) => (
+                <option key={major.id} value={major.id}>
+                  {major.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Module Selection */}
           <div>
             <label
               htmlFor="module-select"
-              className="block text-sm font-medium mb-1"
+              className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300"
             >
               Module
             </label>
             <select
               id="module-select"
-              onChange={(e) => setSelectedModule(e.target.value)}
-              className="w-full input-style"
+              value={selectedModule}
+              onChange={(e) => handleModuleChange(e.target.value)}
+              disabled={!selectedMajor}
+              className="w-full input-style disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <option value="">-- Choose a module --</option>
-              {mockTeacherModules.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.name}
+              <option value="">
+                {selectedMajor ? "-- Choose a module --" : "Select major first"}
+              </option>
+              {availableModules.map((module) => (
+                <option key={module.id} value={module.id}>
+                  {module.name}
                 </option>
               ))}
             </select>
           </div>
+
+          {/* Week/Session Selection */}
           <div>
             <label
-              htmlFor="date-select"
-              className="block text-sm font-medium mb-1"
+              htmlFor="session-select"
+              className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300"
             >
-              Date
+              Week & Session
             </label>
-            <input
-              id="date-select"
-              type="date"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              className="w-full input-style"
-            />
+            <select
+              id="session-select"
+              value={selectedSession}
+              onChange={(e) => setSelectedSession(e.target.value)}
+              disabled={!selectedModule}
+              className="w-full input-style disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <option value="">
+                {selectedModule ? "-- Choose a session --" : "Select module first"}
+              </option>
+              {Object.entries(sessionsByWeek).map(([weekNumber, sessions]) => (
+                <optgroup key={weekNumber} label={`Week ${weekNumber}`}>
+                  {sessions.map((session) => (
+                    <option key={session.id} value={session.id}>
+                      {formatDate(session.date)} at {session.time}
+                    </option>
+                  ))}
+                </optgroup>
+              ))}
+            </select>
           </div>
+
           <button
             onClick={handleSessionSelect}
-            disabled={!selectedModule || !selectedDate}
+            disabled={!selectedModule || !selectedSession}
             className="btn-primary md:w-auto w-full disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Load Student List
@@ -156,8 +308,12 @@ export const TeacherAttendance: FC = () => {
           <div className="p-4 border-b dark:border-gray-700 flex flex-wrap justify-between items-center gap-4">
             <h3 className="font-semibold text-gray-800 dark:text-white">
               Attendance for{" "}
-              {mockTeacherModules.find((m) => m.id === selectedModule)?.name} on{" "}
-              {selectedDate}
+              {availableModules.find((m) => m.id === selectedModule)?.name} -{" "}
+              {selectedSessionData && (
+                <>
+                  Week {selectedSessionData.weekNumber} - {formatDate(selectedSessionData.date)} at {selectedSessionData.time}
+                </>
+              )}
             </h3>
             <button
               onClick={markAllAsPresent}
@@ -245,7 +401,7 @@ export const TeacherAttendance: FC = () => {
             No Session Selected
           </h3>
           <p className="mt-1 text-sm text-gray-500">
-            Please select a module and date above to load the student list.
+            Please select a major, module, and session above to load the student list.
           </p>
         </div>
       )}
@@ -256,6 +412,8 @@ export const TeacherAttendance: FC = () => {
           padding: 0.5rem 0.75rem;
           border: 1px solid #d1d5db;
           border-radius: 0.375rem;
+          background-color: white;
+          color: #374151;
         }
         .dark .input-style {
           background-color: #374151;
