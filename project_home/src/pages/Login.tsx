@@ -86,9 +86,6 @@ export const Login: FC = () => {
                <span className="ml-2 text-2xl font-bold dark:text-white">EMSI-School</span>
              </div>
             <h2 className="mt-8 text-3xl font-extrabold dark:text-white">Portal Sign In</h2>
-            <p className="mt-3 text-sm text-gray-500 dark:text-gray-400">
-              Enter <code className="font-mono text-xs bg-gray-200 dark:bg-gray-700 p-1 rounded">prof.</code> for Teacher view,<br/>or <code className="font-mono text-xs bg-gray-200 dark:bg-gray-700 p-1 rounded">hamza.student</code> for Student view.
-            </p>
           </div>
 
           <div className="bg-white dark:bg-gray-800 shadow rounded-lg px-8 py-10 mt-8">
