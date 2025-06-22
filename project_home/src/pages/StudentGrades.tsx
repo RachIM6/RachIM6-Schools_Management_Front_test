@@ -6,6 +6,15 @@ import { Download, CheckCircle, XCircle, ChevronDown, ChevronRight } from "lucid
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { useStudent } from "../context/StudentContext";
+import { 
+  getModuleInstancesByStudentMajor, 
+  getModuleById, 
+  getTeacherById, 
+  getSemesterById, 
+  getAcademicYearById,
+  semesters
+} from '../data/academicData';
+import { getMajorFromFiliereName } from '../utils/majorMapping';
 
 // Type definitions
 interface ScoreDetail {
@@ -38,166 +47,105 @@ interface AcademicData {
   [year: string]: SemesterData;
 }
 
-// --- Restructured data to support multi-year, multi-semester filtering with detailed scores ---
-const mockAcademicData: AcademicData = {
-  "2024-2025": {
-    "S1": [
-      { 
-        courseCode: "CS301", 
-        courseName: "Advanced Algorithms", 
-        teacher: "Dr. Mohamed TABAA", 
-        score: 18, 
-        grade: "A",
-        details: {
-          project: { score: 19, maxScore: 20, percentage: 30 },
-          exam: { score: 17, maxScore: 20, percentage: 50 },
-          test: { score: 18, maxScore: 20, percentage: 20 }
-        }
-      },
-      { 
-        courseCode: "CS305", 
-        courseName: "Operating Systems", 
-        teacher: "Dr. Linus Torvalds", 
-        score: 17, 
-        grade: "B+",
-        details: {
-          project: { score: 18, maxScore: 20, percentage: 25 },
-          exam: { score: 16, maxScore: 20, percentage: 55 },
-          test: { score: 17, maxScore: 20, percentage: 20 }
-        }
-      },
-      { 
-        courseCode: "MA202", 
-        courseName: "Linear Algebra", 
-        teacher: "Dr. Ada Lovelace", 
-        score: 18, 
-        grade: "A-",
-        details: {
-          project: { score: 17, maxScore: 20, percentage: 20 },
-          exam: { score: 19, maxScore: 20, percentage: 60 },
-          test: { score: 18, maxScore: 20, percentage: 20 }
-        }
-      },
-      { 
-        courseCode: "PH210", 
-        courseName: "Quantum Physics", 
-        teacher: "Dr. Marie Curie", 
-        score: 15, 
-        grade: "B",
-        details: {
-          project: { score: 16, maxScore: 20, percentage: 30 },
-          exam: { score: 14, maxScore: 20, percentage: 50 },
-          test: { score: 15, maxScore: 20, percentage: 20 }
-        }
-      },
-    ]
-  },
-  "2023-2024": {
-    "S1": [
-      { 
-        courseCode: "CS201", 
-        courseName: "Data Structures", 
-        teacher: "Dr. Mohamed TABAA", 
-        score: 19, 
-        grade: "A+",
-        details: {
-          project: { score: 20, maxScore: 20, percentage: 25 },
-          exam: { score: 18, maxScore: 20, percentage: 55 },
-          test: { score: 19, maxScore: 20, percentage: 20 }
-        }
-      },
-      { 
-        courseCode: "MA101", 
-        courseName: "Calculus II", 
-        teacher: "Dr. Isaac Newton", 
-        score: 16, 
-        grade: "B",
-        details: {
-          project: { score: 15, maxScore: 20, percentage: 20 },
-          exam: { score: 17, maxScore: 20, percentage: 60 },
-          test: { score: 16, maxScore: 20, percentage: 20 }
-        }
-      },
-      { 
-        courseCode: "HU101", 
-        courseName: "Ethics in Technology", 
-        teacher: "Dr. Socrates", 
-        score: 20, 
-        grade: "A+",
-        details: {
-          project: { score: 20, maxScore: 20, percentage: 30 },
-          exam: { score: 20, maxScore: 20, percentage: 50 },
-          test: { score: 20, maxScore: 20, percentage: 20 }
-        }
-      },
-    ],
-    "S2": [
-      { 
-        courseCode: "CS205", 
-        courseName: "Computer Architecture", 
-        teacher: "Dr. John von Neumann", 
-        score: 14, 
-        grade: "B-",
-        details: {
-          project: { score: 13, maxScore: 20, percentage: 25 },
-          exam: { score: 15, maxScore: 20, percentage: 55 },
-          test: { score: 14, maxScore: 20, percentage: 20 }
-        }
-      },
-      { 
-        courseCode: "PE101", 
-        courseName: "Physical Education", 
-        teacher: "Mr. Jim Thorpe", 
-        score: 9, 
-        grade: "D",
-        details: {
-          project: { score: 8, maxScore: 20, percentage: 30 },
-          exam: { score: 10, maxScore: 20, percentage: 50 },
-          test: { score: 9, maxScore: 20, percentage: 20 }
-        }
-      },
-      { 
-        courseCode: "EL102", 
-        courseName: "Circuit Theory", 
-        teacher: "Dr. Nikola Tesla", 
-        score: 17, 
-        grade: "B+",
-        details: {
-          project: { score: 18, maxScore: 20, percentage: 25 },
-          exam: { score: 16, maxScore: 20, percentage: 55 },
-          test: { score: 17, maxScore: 20, percentage: 20 }
-        }
-      },
-    ]
-  }
-};
-
-type AcademicYear = keyof typeof mockAcademicData;
-type Semester = "S1" | "S2";
+// --- MOCK GRADE GENERATION FOR DEMO PURPOSES ---
+function generateMockGrade(instanceId: string) {
+  // Deterministic mock for demo: hash instanceId to a number
+  const hash = instanceId.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
+  const base = 12 + (hash % 8); // 12-19
+  const score = Math.min(20, Math.max(8, base));
+  const grade = score >= 18 ? 'A+' : score >= 16 ? 'A' : score >= 14 ? 'B' : score >= 12 ? 'C' : 'D';
+  return {
+    score,
+    grade,
+    details: {
+      project: { score: score - 1, maxScore: 20, percentage: 30 },
+      exam: { score: score, maxScore: 20, percentage: 50 },
+      test: { score: score - 2, maxScore: 20, percentage: 20 }
+    }
+  };
+}
 
 export const StudentGrades: FC = () => {
   const { student } = useStudent();
-  const [selectedYear, setSelectedYear] = useState<AcademicYear | "">("");
-  const [selectedSemester, setSelectedSemester] = useState<Semester | "">("");
+
+  // State for selection MUST be declared before useMemo hooks that use it
+  const [selectedYear, setSelectedYear] = useState<string>("");
+  const [selectedSemester, setSelectedSemester] = useState<string>("");
   const [expandedCourse, setExpandedCourse] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
 
+  const studentMajor = useMemo(() => student?.filiereName ? getMajorFromFiliereName(student.filiereName) : null, [student?.filiereName]);
+
+  // Build a map: { [year]: { [semester]: CourseGrade[] } }
+  const dynamicAcademicData = useMemo(() => {
+    if (!studentMajor) return {};
+    const data: Record<string, Record<string, CourseGrade[]>> = {};
+    
+    // Iterate over all semesters to find module instances for the student's major
+    semesters.forEach(semester => {
+      const instances = getModuleInstancesByStudentMajor(studentMajor.id, semester.id);
+      if (instances.length === 0) return;
+      
+      const academicYear = getAcademicYearById(semester.academicYearId);
+      if (!academicYear) return;
+
+      if (!data[academicYear.name]) {
+        data[academicYear.name] = {};
+      }
+      if (!data[academicYear.name][semester.name]) {
+        data[academicYear.name][semester.name] = [];
+      }
+      
+      instances.forEach(instance => {
+        const module = getModuleById(instance.moduleId);
+        const teacher = getTeacherById(instance.teacherId);
+        if (!module || !teacher) return;
+        
+        const mock = generateMockGrade(instance.id);
+        data[academicYear.name][semester.name].push({
+          courseCode: module.code,
+          courseName: module.name,
+          teacher: `${teacher.firstName} ${teacher.lastName}`,
+          score: mock.score,
+          grade: mock.grade,
+          details: mock.details
+        });
+      });
+    });
+    return data;
+  }, [studentMajor]);
+
+  // Get sorted years and semesters
+  const availableYears = useMemo(() => Object.keys(dynamicAcademicData).sort((a, b) => b.localeCompare(a)), [dynamicAcademicData]);
+  
+  const availableSemesters = useMemo(() => {
+    if (!selectedYear || !dynamicAcademicData[selectedYear]) return [];
+    return Object.keys(dynamicAcademicData[selectedYear]).sort((a, b) => a.localeCompare(b));
+  }, [dynamicAcademicData, selectedYear]);
+
   const handleYearChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const year = e.target.value as AcademicYear | "";
+    const year = e.target.value;
     setSelectedYear(year);
-    // Reset semester when year changes
-    setSelectedSemester(""); 
+    setSelectedSemester("");
     setExpandedCourse(null);
   };
 
   const handleSemesterChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setSelectedSemester(e.target.value as Semester | "");
+    setSelectedSemester(e.target.value);
     setExpandedCourse(null);
   };
 
   const toggleCourseExpansion = (courseCode: string) => {
     setExpandedCourse(expandedCourse === courseCode ? null : courseCode);
   };
+
+  // Use useMemo to get the grades to display
+  const gradesToDisplay = useMemo(() => {
+    if (selectedYear && selectedSemester) {
+      return dynamicAcademicData[selectedYear]?.[selectedSemester] || [];
+    }
+    return [];
+  }, [selectedYear, selectedSemester, dynamicAcademicData]);
 
   const exportTranscript = () => {
     if (!selectedYear || !selectedSemester || gradesToDisplay.length === 0) return;
@@ -300,16 +248,6 @@ export const StudentGrades: FC = () => {
       setIsExporting(false);
     }
   };
-  
-  // Use useMemo to get the grades to display, this prevents recalculating on every render
-  const gradesToDisplay = useMemo(() => {
-    if (selectedYear && selectedSemester) {
-      const yearData = mockAcademicData[selectedYear];
-      const semesterData = yearData[selectedSemester];
-      return semesterData || [];
-    }
-    return [];
-  }, [selectedYear, selectedSemester]);
 
   return (
     <div className="space-y-6">
@@ -324,7 +262,7 @@ export const StudentGrades: FC = () => {
             <label htmlFor="year-select" className="block text-sm font-medium text-gray-700 dark:text-gray-300">1. Select Academic Year</label>
             <select id="year-select" value={selectedYear} onChange={handleYearChange} className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white">
               <option value="" disabled>-- Choose a year --</option>
-              {Object.keys(mockAcademicData).map(year => (
+              {availableYears.map(year => (
                 <option key={year} value={year}>{year}</option>
               ))}
             </select>
@@ -336,7 +274,7 @@ export const StudentGrades: FC = () => {
               <label htmlFor="semester-select" className="block text-sm font-medium text-gray-700 dark:text-gray-300">2. Select Semester</label>
               <select id="semester-select" value={selectedSemester} onChange={handleSemesterChange} className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white">
                 <option value="" disabled>-- Choose a semester --</option>
-                {Object.keys(mockAcademicData[selectedYear]).map(semester => (
+                {availableSemesters.map(semester => (
                   <option key={semester} value={semester}>Semester {semester.substring(1)}</option>
                 ))}
               </select>
