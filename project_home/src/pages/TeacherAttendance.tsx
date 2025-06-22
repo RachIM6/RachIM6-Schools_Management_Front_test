@@ -1,7 +1,8 @@
 // --- START OF FILE: pages/teacher/TeacherAttendance.tsx ---
 
-import { FC, useState, useMemo } from "react";
+import { FC, useState, useMemo, useEffect } from "react";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { useTeacher } from "@/context/TeacherContext";
 import {
   Check,
   X,
@@ -12,14 +13,23 @@ import {
   Save,
   CheckSquare,
   Users,
+  Eye,
+  FileText,
 } from "lucide-react";
-
-// Define the shape of a student's attendance record for state management
-type StudentAttendanceRecord = {
-  id: string;
-  name: string;
-  status: "PRESENT" | "ABSENT" | "LATE" | "EXCUSED";
-};
+import { 
+  getModuleInstancesByTeacher,
+  getModuleById,
+  getMajorById,
+  getSemesterById,
+  getAcademicYearById,
+  semesters
+} from '@/data/academicData';
+import { 
+  attendanceStorage, 
+  type StudentAttendanceRecord, 
+  type AttendanceSession,
+  type AttendanceStatus 
+} from '@/data/attendanceStorage';
 
 // Define the shape of a scheduled session
 type ScheduledSession = {
@@ -27,148 +37,195 @@ type ScheduledSession = {
   date: string;
   time: string;
   weekNumber: number;
+  weekLabel: string;
 };
 
-// Mock data for majors and their modules
-const majors = [
-  { id: "CS", name: "Computer Science" },
-  { id: "ENG", name: "Engineering" },
-  { id: "BUS", name: "Business" },
-  { id: "PH", name: "Physics" },
+// Mock student list - in real app this would come from the database
+const mockStudentListForSession: Omit<StudentAttendanceRecord, 'status'>[] = [
+  { id: "student-1", name: "Rachid IMOURIGUE" },
+  { id: "student-2", name: "Mohamed HAJJI" },
+  { id: "student-3", name: "Ayoub Marghad" },
+  { id: "student-4", name: "Fatima Zahra" },
+  { id: "student-5", name: "Yassine Alami" },
+  { id: "student-6", name: "Laila Bensouda" },
+  { id: "student-7", name: "Karim Idrissi" },
+  { id: "student-8", name: "Nadia Tazi" },
+  { id: "student-9", name: "Omar Benjelloun" },
+  { id: "student-10", name: "Salma Bakkali" },
+  { id: "student-11", name: "Mehdi Chraibi" },
+  { id: "student-12", name: "Amina Fassi" },
+  { id: "student-13", name: "Younes Berrada" },
+  { id: "student-14", name: "Hajar Mansouri" },
+  { id: "student-15", name: "Zakaria Bouali" },
+  { id: "student-16", name: "Soukaina Alaoui" },
+  { id: "student-17", name: "Hamza Bennani" },
+  { id: "student-18", name: "Imane Chaoui" },
+  { id: "student-19", name: "Youssef Lahrichi" },
+  { id: "student-20", name: "Zineb Moussaoui" },
+  { id: "student-21", name: "Adil Tahiri" },
+  { id: "student-22", name: "Houda Ziani" },
+  { id: "student-23", name: "Khalid Ouazzani" },
+  { id: "student-24", name: "Samira Doukkali" },
+  { id: "student-25", name: "Tarik El Amrani" },
 ];
 
-const modulesByMajor = {
-  CS: [
-    { id: "CS301", name: "Advanced Algorithms" },
-    { id: "CS305", name: "Operating Systems" },
-    { id: "CS302", name: "Database Systems" },
-    { id: "CS303", name: "Software Engineering" },
-  ],
-  ENG: [
-    { id: "ENG201", name: "Mechanical Engineering" },
-    { id: "ENG202", name: "Electrical Engineering" },
-    { id: "ENG203", name: "Civil Engineering" },
-  ],
-  BUS: [
-    { id: "BUS101", name: "Business Management" },
-    { id: "BUS102", name: "Marketing" },
-    { id: "BUS103", name: "Finance" },
-  ],
-  PH: [
-    { id: "PH210", name: "Quantum Physics" },
-    { id: "PH211", name: "Classical Mechanics" },
-    { id: "PH212", name: "Thermodynamics" },
-  ],
-};
+// Generate scheduled sessions for a module
+const generateScheduledSessions = (moduleId: string, semesterId: string): ScheduledSession[] => {
+  const semester = getSemesterById(semesterId);
+  if (!semester) return [];
 
-// Mock scheduled sessions organized by week
-const scheduledSessions: Record<string, ScheduledSession[]> = {
-  "CS301": [
-    { id: "1", date: "2024-01-15", time: "09:00", weekNumber: 1 },
-    { id: "2", date: "2024-01-22", time: "09:00", weekNumber: 2 },
-    { id: "3", date: "2024-01-29", time: "09:00", weekNumber: 3 },
-    { id: "4", date: "2024-02-05", time: "09:00", weekNumber: 4 },
-    { id: "5", date: "2024-02-12", time: "09:00", weekNumber: 5 },
-    { id: "6", date: "2024-02-19", time: "09:00", weekNumber: 6 },
-  ],
-  "CS305": [
-    { id: "1", date: "2024-01-16", time: "14:00", weekNumber: 1 },
-    { id: "2", date: "2024-01-23", time: "14:00", weekNumber: 2 },
-    { id: "3", date: "2024-01-30", time: "14:00", weekNumber: 3 },
-    { id: "4", date: "2024-02-06", time: "14:00", weekNumber: 4 },
-    { id: "5", date: "2024-02-13", time: "14:00", weekNumber: 5 },
-    { id: "6", date: "2024-02-20", time: "14:00", weekNumber: 6 },
-  ],
-  "CS302": [
-    { id: "1", date: "2024-01-17", time: "11:00", weekNumber: 1 },
-    { id: "2", date: "2024-01-24", time: "11:00", weekNumber: 2 },
-    { id: "3", date: "2024-01-31", time: "11:00", weekNumber: 3 },
-    { id: "4", date: "2024-02-07", time: "11:00", weekNumber: 4 },
-    { id: "5", date: "2024-02-14", time: "11:00", weekNumber: 5 },
-    { id: "6", date: "2024-02-21", time: "11:00", weekNumber: 6 },
-  ],
-  "CS303": [
-    { id: "1", date: "2024-01-18", time: "16:00", weekNumber: 1 },
-    { id: "2", date: "2024-01-25", time: "16:00", weekNumber: 2 },
-    { id: "3", date: "2024-02-01", time: "16:00", weekNumber: 3 },
-    { id: "4", date: "2024-02-08", time: "16:00", weekNumber: 4 },
-    { id: "5", date: "2024-02-15", time: "16:00", weekNumber: 5 },
-    { id: "6", date: "2024-02-22", time: "16:00", weekNumber: 6 },
-  ],
-};
+  const academicYear = getAcademicYearById(semester.academicYearId);
+  if (!academicYear) return [];
 
-const mockStudentListForSession: StudentAttendanceRecord[] = [
-  { id: "student-1", name: "Rachid IMOURIGUE", status: "ABSENT" },
-  { id: "student-2", name: "Mohamed HAJJI", status: "ABSENT" },
-  { id: "student-3", name: "Ayoub Marghad", status: "ABSENT" },
-  { id: "student-4", name: "Fatima Zahra", status: "ABSENT" },
-  { id: "student-5", name: "Yassine Alami", status: "ABSENT" },
-  { id: "student-6", name: "Laila Bensouda", status: "ABSENT" },
-  { id: "student-7", name: "Karim Idrissi", status: "ABSENT" },
-  { id: "student-8", name: "Nadia Tazi", status: "ABSENT" },
-  { id: "student-9", name: "Omar Benjelloun", status: "ABSENT" },
-  { id: "student-10", name: "Salma Bakkali", status: "ABSENT" },
-  { id: "student-11", name: "Mehdi Chraibi", status: "ABSENT" },
-  { id: "student-12", name: "Amina Fassi", status: "ABSENT" },
-  { id: "student-13", name: "Younes Berrada", status: "ABSENT" },
-  { id: "student-14", name: "Hajar Mansouri", status: "ABSENT" },
-  { id: "student-15", name: "Zakaria Bouali", status: "ABSENT" },
-  { id: "student-16", name: "Soukaina Alaoui", status: "ABSENT" },
-  { id: "student-17", name: "Hamza Bennani", status: "ABSENT" },
-  { id: "student-18", name: "Imane Chaoui", status: "ABSENT" },
-  { id: "student-19", name: "Youssef Lahrichi", status: "ABSENT" },
-  { id: "student-20", name: "Zineb Moussaoui", status: "ABSENT" },
-  { id: "student-21", name: "Adil Tahiri", status: "ABSENT" },
-  { id: "student-22", name: "Houda Ziani", status: "ABSENT" },
-  { id: "student-23", name: "Khalid Ouazzani", status: "ABSENT" },
-  { id: "student-24", name: "Samira Doukkali", status: "ABSENT" },
-  { id: "student-25", name: "Tarik El Amrani", status: "ABSENT" },
-];
+  const module = getModuleById(moduleId);
+  if (!module) return [];
+
+  const sessions: ScheduledSession[] = [];
+  const numWeeks = 14;
+  
+  // Calculate start date based on semester
+  const year = parseInt(academicYear.name.split('-')[semester.name === 'S1' ? 0 : 1]);
+  const startDate = new Date(semester.name === 'S1' ? `${year}-09-02` : `${year}-02-03`);
+
+  // Fixed time slots based on module code for consistency
+  const timeSlots = [9, 11, 13, 15, 17];
+  const timeIndex = module.code.charCodeAt(module.code.length - 1) % timeSlots.length;
+  const startTime = timeSlots[timeIndex];
+
+  for (let week = 0; week < numWeeks; week++) {
+    const weekStart = new Date(startDate);
+    weekStart.setDate(weekStart.getDate() + (week * 7));
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekEnd.getDate() + 4);
+    
+    const weekNumber = week + 1;
+    const fromDate = weekStart.toLocaleDateString('en-US', { month: 'short' });
+    const toDate = weekEnd.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+    const weekLabel = `Week ${weekNumber.toString().padStart(2, '0')} : ${fromDate} - ${toDate}`;
+
+    // Use Monday as the class day
+    const classDate = new Date(weekStart);
+    classDate.setDate(weekStart.getDate() + 0); // Monday
+
+    sessions.push({
+      id: `${moduleId}-week-${weekNumber}`,
+      date: classDate.toISOString().split('T')[0],
+      time: `${startTime.toString().padStart(2, '0')}:00`,
+      weekNumber,
+      weekLabel
+    });
+  }
+
+  return sessions;
+};
 
 export const TeacherAttendance: FC = () => {
-  const [selectedMajor, setSelectedMajor] = useState("");
-  const [selectedModule, setSelectedModule] = useState("");
-  const [selectedSession, setSelectedSession] = useState("");
+  const { teacher } = useTeacher();
+  const [selectedModuleInstance, setSelectedModuleInstance] = useState("");
+  const [selectedWeek, setSelectedWeek] = useState("");
   const [students, setStudents] = useState<StudentAttendanceRecord[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(false);
 
-  const availableModules = selectedMajor ? modulesByMajor[selectedMajor as keyof typeof modulesByMajor] || [] : [];
-  const availableSessions = selectedModule ? scheduledSessions[selectedModule] || [] : [];
+  // Get teacher's module instances
+  const teacherModuleInstances = useMemo(() => {
+    if (!teacher) return [];
+    return getModuleInstancesByTeacher(teacher.keycloakId);
+  }, [teacher]);
 
-  // Group sessions by week
-  const sessionsByWeek = useMemo(() => {
-    const grouped: Record<number, ScheduledSession[]> = {};
-    availableSessions.forEach(session => {
-      if (!grouped[session.weekNumber]) {
-        grouped[session.weekNumber] = [];
-      }
-      grouped[session.weekNumber].push(session);
+  // Get current semester
+  const currentSemester = useMemo(() => {
+    return semesters.find(semester => semester.isActive);
+  }, []);
+
+  // Filter module instances for current semester
+  const currentModuleInstances = useMemo(() => {
+    if (!currentSemester) return [];
+    return teacherModuleInstances.filter(instance => instance.semesterId === currentSemester.id);
+  }, [teacherModuleInstances, currentSemester]);
+
+  // Get available modules with major information
+  const availableModules = useMemo(() => {
+    return currentModuleInstances.map(instance => {
+      const module = getModuleById(instance.moduleId);
+      const major = module ? getMajorById(module.majorId) : null;
+      return {
+        id: instance.id,
+        moduleId: instance.moduleId,
+        moduleName: module?.name || 'Unknown Module',
+        moduleCode: module?.code || 'Unknown',
+        majorName: major?.name || 'Unknown Major',
+        majorCode: major?.code || 'Unknown',
+        semesterId: instance.semesterId,
+        isActive: instance.isActive
+      };
     });
-    return grouped;
+  }, [currentModuleInstances]);
+
+  // Get scheduled sessions for selected module
+  const availableSessions = useMemo(() => {
+    if (!selectedModuleInstance) return [];
+    const instance = currentModuleInstances.find(inst => inst.id === selectedModuleInstance);
+    if (!instance) return [];
+    
+    return generateScheduledSessions(instance.moduleId, instance.semesterId);
+  }, [selectedModuleInstance, currentModuleInstances]);
+
+  // Get current week (default selection)
+  const currentWeek = useMemo(() => {
+    if (availableSessions.length === 0) return null;
+    // For demo purposes, select week 3 as current
+    return availableSessions.find(session => session.weekNumber === 3) || availableSessions[0];
   }, [availableSessions]);
 
-  const handleMajorChange = (majorId: string) => {
-    setSelectedMajor(majorId);
-    setSelectedModule(""); // Reset module selection
-    setSelectedSession(""); // Reset session selection
+  // Auto-select current week when sessions are loaded
+  useEffect(() => {
+    if (currentWeek && !selectedWeek) {
+      setSelectedWeek(currentWeek.id);
+    }
+  }, [currentWeek, selectedWeek]);
+
+  const handleModuleChange = (moduleInstanceId: string) => {
+    setSelectedModuleInstance(moduleInstanceId);
+    setSelectedWeek(""); // Reset week selection
     setStudents([]); // Clear students
+    setIsSubmitted(false);
   };
 
-  const handleModuleChange = (moduleId: string) => {
-    setSelectedModule(moduleId);
-    setSelectedSession(""); // Reset session selection
+  const handleWeekChange = (sessionId: string) => {
+    setSelectedWeek(sessionId);
     setStudents([]); // Clear students
+    setIsSubmitted(false);
   };
 
   const handleSessionSelect = () => {
-    if (selectedModule && selectedSession) {
-      // In a real app, you'd fetch students for this module/session. Here, we just load the mock list.
-      setStudents(mockStudentListForSession);
+    if (selectedModuleInstance && selectedWeek) {
+      setIsLoading(true);
+      
+      // Check if we have stored data for this session
+      const storedSession = attendanceStorage.getSession(selectedModuleInstance, selectedWeek);
+      
+      if (storedSession) {
+        // Load existing data
+        setStudents(storedSession.students);
+        setIsSubmitted(!!storedSession.submittedAt);
+      } else {
+        // Load fresh student list with no default status
+        const freshStudents = mockStudentListForSession.map(student => ({
+          ...student,
+          status: undefined // No default value - no option selected
+        }));
+        setStudents(freshStudents);
+        setIsSubmitted(false);
+      }
+      
+      setIsLoading(false);
     }
   };
 
   const setStudentStatus = (
     studentId: string,
-    status: StudentAttendanceRecord["status"]
+    status: AttendanceStatus
   ) => {
     setStudents((prev) =>
       prev.map((s) => (s.id === studentId ? { ...s, status } : s))
@@ -180,13 +237,37 @@ export const TeacherAttendance: FC = () => {
   };
 
   const handleSubmitAttendance = () => {
-    console.log("Submitting attendance sheet:", {
-      major: selectedMajor,
-      module: selectedModule,
-      session: selectedSession,
-      records: students,
-    });
-    alert("Attendance sheet has been saved (simulated).");
+    if (!selectedModuleInstance || !selectedWeek || students.length === 0) return;
+
+    // Check if all students have a status
+    const studentsWithoutStatus = students.filter(student => !student.status);
+    if (studentsWithoutStatus.length > 0) {
+      alert(`Please mark attendance for all students. ${studentsWithoutStatus.length} student(s) still need attendance marked.`);
+      return;
+    }
+
+    const selectedSessionData = availableSessions.find(s => s.id === selectedWeek);
+    if (!selectedSessionData) return;
+
+    // Create attendance session
+    const attendanceSession: AttendanceSession = {
+      moduleInstanceId: selectedModuleInstance,
+      weekId: selectedWeek,
+      date: selectedSessionData.date,
+      time: selectedSessionData.time,
+      weekNumber: selectedSessionData.weekNumber,
+      weekLabel: selectedSessionData.weekLabel,
+      students: students as StudentAttendanceRecord[], // All students now have status
+      submittedAt: new Date().toISOString(),
+      submittedBy: teacher?.keycloakId || 'unknown'
+    };
+
+    // Save to storage
+    attendanceStorage.saveSession(attendanceSession);
+    setIsSubmitted(true);
+    
+    console.log("Attendance sheet saved:", attendanceSession);
+    alert("Attendance sheet has been saved successfully!");
   };
 
   const formatDate = (dateString: string) => {
@@ -198,7 +279,17 @@ export const TeacherAttendance: FC = () => {
     });
   };
 
-  const selectedSessionData = availableSessions.find(s => s.id === selectedSession);
+  const selectedModuleData = availableModules.find(m => m.id === selectedModuleInstance);
+  const selectedSessionData = availableSessions.find(s => s.id === selectedWeek);
+
+  // Show loading if teacher is not loaded
+  if (!teacher) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -212,92 +303,71 @@ export const TeacherAttendance: FC = () => {
         <h3 className="text-lg font-semibold text-gray-800 dark:text-white">
           Select a Session
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-          {/* Major Selection */}
-          <div>
-            <label
-              htmlFor="major-select"
-              className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300"
-            >
-              Major
-            </label>
-            <select
-              id="major-select"
-              value={selectedMajor}
-              onChange={(e) => handleMajorChange(e.target.value)}
-              className="w-full input-style"
-            >
-              <option value="">-- Choose a major --</option>
-              {majors.map((major) => (
-                <option key={major.id} value={major.id}>
-                  {major.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
           {/* Module Selection */}
           <div>
             <label
               htmlFor="module-select"
               className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300"
             >
-              Module
+              Current Teaching Module
             </label>
             <select
               id="module-select"
-              value={selectedModule}
+              value={selectedModuleInstance}
               onChange={(e) => handleModuleChange(e.target.value)}
-              disabled={!selectedMajor}
-              className="w-full input-style disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full input-style"
             >
-              <option value="">
-                {selectedMajor ? "-- Choose a module --" : "Select major first"}
-              </option>
+              <option value="">-- Choose a module --</option>
               {availableModules.map((module) => (
                 <option key={module.id} value={module.id}>
-                  {module.name}
+                  {module.moduleName} ({module.majorName})
                 </option>
               ))}
             </select>
           </div>
 
-          {/* Week/Session Selection */}
+          {/* Week Selection */}
           <div>
             <label
               htmlFor="session-select"
               className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300"
             >
-              Week & Session
+              Week
             </label>
             <select
               id="session-select"
-              value={selectedSession}
-              onChange={(e) => setSelectedSession(e.target.value)}
-              disabled={!selectedModule}
+              value={selectedWeek}
+              onChange={(e) => handleWeekChange(e.target.value)}
+              disabled={!selectedModuleInstance}
               className="w-full input-style disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <option value="">
-                {selectedModule ? "-- Choose a session --" : "Select module first"}
+                {selectedModuleInstance ? "-- Choose a week --" : "Select module first"}
               </option>
-              {Object.entries(sessionsByWeek).map(([weekNumber, sessions]) => (
-                <optgroup key={weekNumber} label={`Week ${weekNumber}`}>
-                  {sessions.map((session) => (
-                    <option key={session.id} value={session.id}>
-                      {formatDate(session.date)} at {session.time}
-                    </option>
-                  ))}
-                </optgroup>
-              ))}
+              {availableSessions.map((session) => {
+                const hasStoredData = attendanceStorage.hasSession(selectedModuleInstance, session.id);
+                const storedSession = attendanceStorage.getSession(selectedModuleInstance, session.id);
+                const isSubmitted = storedSession?.submittedAt;
+                
+                return (
+                  <option key={session.id} value={session.id}>
+                    {session.weekLabel}
+                    {hasStoredData && (
+                      isSubmitted ? " ✓" : " (Draft)"
+                    )}
+                  </option>
+                );
+              })}
             </select>
           </div>
 
           <button
             onClick={handleSessionSelect}
-            disabled={!selectedModule || !selectedSession}
+            disabled={!selectedModuleInstance || !selectedWeek || isLoading}
             className="btn-primary md:w-auto w-full disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Load Student List
+            {isLoading ? "Loading..." : "Load Student List"}
           </button>
         </div>
       </div>
@@ -306,21 +376,31 @@ export const TeacherAttendance: FC = () => {
       {students.length > 0 ? (
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md">
           <div className="p-4 border-b dark:border-gray-700 flex flex-wrap justify-between items-center gap-4">
-            <h3 className="font-semibold text-gray-800 dark:text-white">
-              Attendance for{" "}
-              {availableModules.find((m) => m.id === selectedModule)?.name} -{" "}
-              {selectedSessionData && (
-                <>
-                  Week {selectedSessionData.weekNumber} - {formatDate(selectedSessionData.date)} at {selectedSessionData.time}
-                </>
+            <div className="flex items-center gap-4">
+              <h3 className="font-semibold text-gray-800 dark:text-white">
+                Attendance for{" "}
+                {selectedModuleData?.moduleName} -{" "}
+                {selectedSessionData && (
+                  <>
+                    {selectedSessionData.weekLabel}
+                  </>
+                )}
+              </h3>
+              {isSubmitted && (
+                <span className="px-2 py-1 text-xs bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded-full flex items-center gap-1">
+                  <FileText size={12} />
+                  Submitted
+                </span>
               )}
-            </h3>
-            <button
-              onClick={markAllAsPresent}
-              className="btn-secondary text-xs"
-            >
-              <CheckSquare size={14} className="mr-2" /> Mark All as Present
-            </button>
+            </div>
+            {!isSubmitted && (
+              <button
+                onClick={markAllAsPresent}
+                className="btn-secondary text-xs"
+              >
+                <CheckSquare size={14} className="mr-2" /> Mark All as Present
+              </button>
+            )}
           </div>
           <ul className="divide-y dark:divide-gray-700 max-h-[60vh] overflow-y-auto">
             {students.map((student) => (
@@ -335,7 +415,7 @@ export const TeacherAttendance: FC = () => {
                   {[
                     {
                       label: "Present",
-                      status: "PRESENT",
+                      status: "PRESENT" as AttendanceStatus,
                       icon: <Check size={14} />,
                       colors:
                         "bg-green-100 text-green-800 dark:bg-green-900/70 dark:text-green-200",
@@ -344,7 +424,7 @@ export const TeacherAttendance: FC = () => {
                     },
                     {
                       label: "Absent",
-                      status: "ABSENT",
+                      status: "ABSENT" as AttendanceStatus,
                       icon: <X size={14} />,
                       colors:
                         "bg-red-100 text-red-800 dark:bg-red-900/70 dark:text-red-200",
@@ -353,7 +433,7 @@ export const TeacherAttendance: FC = () => {
                     },
                     {
                       label: "Late",
-                      status: "LATE",
+                      status: "LATE" as AttendanceStatus,
                       icon: <Clock size={14} />,
                       colors:
                         "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/70 dark:text-yellow-200",
@@ -362,7 +442,7 @@ export const TeacherAttendance: FC = () => {
                     },
                     {
                       label: "Excused",
-                      status: "EXCUSED",
+                      status: "EXCUSED" as AttendanceStatus,
                       icon: <AlertTriangle size={14} />,
                       colors:
                         "bg-blue-100 text-blue-800 dark:bg-blue-900/70 dark:text-blue-200",
@@ -373,13 +453,14 @@ export const TeacherAttendance: FC = () => {
                     <button
                       key={item.status}
                       onClick={() =>
-                        setStudentStatus(student.id, item.status as any)
+                        setStudentStatus(student.id, item.status)
                       }
+                      disabled={isSubmitted}
                       className={`flex items-center px-3 py-1.5 text-xs rounded-full transition-all ${
                         student.status === item.status
                           ? `${item.active} font-bold shadow-md`
                           : `${item.disabled} cursor-pointer hover:opacity-80`
-                      }`}
+                      } ${isSubmitted ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
                       {item.icon}{" "}
                       <span className="ml-1.5 hidden sm:inline">
@@ -391,12 +472,35 @@ export const TeacherAttendance: FC = () => {
               </li>
             ))}
           </ul>
-          <div className="p-4 flex justify-end bg-gray-50 dark:bg-gray-900/50 border-t dark:border-gray-700">
-            <button onClick={handleSubmitAttendance} className="btn-primary">
-              <Save size={16} className="mr-2" />
-              Save Attendance Sheet
-            </button>
-          </div>
+          {!isSubmitted && (
+            <div className="p-4 flex justify-between items-center bg-gray-50 dark:bg-gray-900/50 border-t dark:border-gray-700">
+              <div className="text-sm text-gray-600 dark:text-gray-400">
+                {(() => {
+                  const studentsWithoutStatus = students.filter(student => !student.status);
+                  if (studentsWithoutStatus.length > 0) {
+                    return (
+                      <span className="text-orange-600 dark:text-orange-400">
+                        ⚠️ {studentsWithoutStatus.length} student(s) need attendance marked
+                      </span>
+                    );
+                  }
+                  return (
+                    <span className="text-green-600 dark:text-green-400">
+                      ✓ All students marked
+                    </span>
+                  );
+                })()}
+              </div>
+              <button 
+                onClick={handleSubmitAttendance} 
+                disabled={students.some(student => !student.status)}
+                className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Save size={16} className="mr-2" />
+                Save Attendance Sheet
+              </button>
+            </div>
+          )}
         </div>
       ) : (
         <div className="text-center py-16 px-6 bg-white dark:bg-gray-800 rounded-lg shadow-md mt-8">
@@ -405,7 +509,7 @@ export const TeacherAttendance: FC = () => {
             No Session Selected
           </h3>
           <p className="mt-1 text-sm text-gray-500">
-            Please select a major, module, and session above to load the student list.
+            Please select a module and session above to load the student list.
           </p>
         </div>
       )}
