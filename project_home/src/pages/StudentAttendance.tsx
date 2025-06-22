@@ -57,6 +57,11 @@ const buildAttendanceData = (studentName: string, studentMajorId: string) => {
   return attendanceData;
 };
 
+// Get current semester
+const getCurrentSemester = () => {
+  return semesters.find(semester => semester.isActive);
+};
+
 const StatusBadge: FC<{ status: string }> = ({ status }) => {
   const styles = {
     Present: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
@@ -78,6 +83,17 @@ export const StudentAttendance: FC = () => {
     const studentMajor = student?.filiereName ? getMajorFromFiliereName(student.filiereName) : null;
     const attendanceData = useMemo(() => studentMajor ? buildAttendanceData(studentName, studentMajor.id) : {}, [studentName, studentMajor]);
     const [activeSelection, setActiveSelection] = useState<{ year: string | null; semester: string | null; month: string | null }>({ year: null, semester: null, month: null });
+    
+    // Get current semester
+    const currentSemester = useMemo(() => {
+      return getCurrentSemester();
+    }, []);
+    
+    // Get current academic year
+    const currentAcademicYear = useMemo(() => {
+      if (!currentSemester) return null;
+      return academicYears.find(year => year.id === currentSemester.academicYearId);
+    }, [currentSemester]);
   
     const displayedRecords = useMemo(() => {
         const { year, semester, month } = activeSelection;
@@ -87,7 +103,10 @@ export const StudentAttendance: FC = () => {
 
     return (
         <div className="space-y-8">
-            <PageHeader title="My Attendance" description="Track your presence in all courses by selecting a period below." />
+            <PageHeader 
+                title="My Attendance" 
+                description={`Track your presence in all courses. ${currentAcademicYear && currentSemester ? `Current: ${currentAcademicYear.name} - Semester ${currentSemester.name.substring(1)}` : ''}`} 
+            />
 
             <div className="w-full max-w-3xl mx-auto">
                 <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md">
@@ -96,7 +115,15 @@ export const StudentAttendance: FC = () => {
                             {({ open }) => (
                                 <div className={yearIndex > 0 ? "border-t border-gray-200 dark:border-gray-700" : ""}>
                                 <Disclosure.Button className="flex w-full justify-between items-center px-6 py-4 text-left text-md font-medium text-blue-900 dark:text-blue-200 hover:bg-blue-50 dark:hover:bg-blue-900/50 focus:outline-none focus-visible:ring focus-visible:ring-blue-500 focus-visible:ring-opacity-75">
-                                    <span className="flex items-center"><CalendarDays className="h-5 w-5 text-blue-500 mr-3"/>Academic Year {year}</span>
+                                    <span className="flex items-center">
+                                        <CalendarDays className="h-5 w-5 text-blue-500 mr-3"/>
+                                        Academic Year {year}
+                                        {currentAcademicYear && year === currentAcademicYear.name && (
+                                            <span className="ml-2 px-2 py-1 text-xs bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded-full">
+                                                Current
+                                            </span>
+                                        )}
+                                    </span>
                                     <ChevronDown className={`${open ? 'rotate-180' : ''} h-5 w-5 text-blue-500 transition-transform`} />
                                 </Disclosure.Button>
                                 <Disclosure.Panel className="px-6 pb-4 pt-2 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
@@ -106,7 +133,15 @@ export const StudentAttendance: FC = () => {
                                             {({ open: semesterOpen }) => (
                                                 <div>
                                                     <Disclosure.Button onClick={() => setActiveSelection({ year: year, semester: semester, month: null })} className={`w-full flex justify-between items-center text-left p-3 rounded-lg transition-colors ${activeSelection.semester === semester && activeSelection.year === year ? 'bg-blue-100 dark:bg-blue-900/70' : 'hover:bg-gray-200 dark:hover:bg-gray-700'}`}>
-                                                        <span className="font-semibold flex items-center text-gray-800 dark:text-gray-200"><Book className="h-5 w-5 mr-3 text-gray-500 dark:text-gray-400"/>Semester {semester.substring(1)}</span>
+                                                        <span className="font-semibold flex items-center text-gray-800 dark:text-gray-200">
+                                                            <Book className="h-5 w-5 mr-3 text-gray-500 dark:text-gray-400"/>
+                                                            Semester {semester.substring(1)}
+                                                            {currentSemester && semester === currentSemester.name && year === currentAcademicYear?.name && (
+                                                                <span className="ml-2 px-2 py-1 text-xs bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded-full">
+                                                                    Active
+                                                                </span>
+                                                            )}
+                                                        </span>
                                                         <ChevronDown className={`${semesterOpen ? 'rotate-180' : ''} h-5 w-5 text-gray-500 transition-transform`} />
                                                     </Disclosure.Button>
                                                     <Transition as={Fragment} enter="transition duration-100 ease-out" enterFrom="transform -translate-y-2 opacity-0" enterTo="transform translate-y-0 opacity-100" leave="transition duration-75 ease-out" leaveFrom="transform translate-y-0 opacity-100" leaveTo="transform -translate-y-2 opacity-0">
