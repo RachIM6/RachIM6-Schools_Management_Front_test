@@ -2,179 +2,62 @@
 import { FC, useState, useMemo, useEffect } from "react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Save, AlertTriangle, Percent, BookOpen, ChevronDown, Edit, X, Check } from "lucide-react";
+import { useTeacher } from "@/context/TeacherContext";
+import { 
+  getModuleInstancesByTeacher,
+  getModuleById,
+  getMajorById,
+  getSemesterById,
+  getAcademicYearById,
+  semesters
+} from '@/data/academicData';
 
-const mockStudents = [
-  {
-    id: "student-1",
-    name: "Rachid IMOURIGUE",
-    grades: {
-      control: null as number | null,
-      project: null as number | null,
-      finalExam: null as number | null,
-    },
-  },
-  {
-    id: "student-2",
-    name: "Mohamed HAJJI",
-    grades: {
-      control: null as number | null,
-      project: null as number | null,
-      finalExam: null as number | null,
-    },
-  },
-  {
-    id: "student-3",
-    name: "Ayoub Marghad",
-    grades: {
-      control: null as number | null,
-      project: null as number | null,
-      finalExam: null as number | null,
-    },
-  },
-  {
-    id: "student-4",
-    name: "Fatima Zahra",
-    grades: {
-      control: null as number | null,
-      project: null as number | null,
-      finalExam: null as number | null,
-    },
-  },
-  {
-    id: "student-5",
-    name: "Yassine Alami",
-    grades: {
-      control: null as number | null,
-      project: null as number | null,
-      finalExam: null as number | null,
-    },
-  },
-  {
-    id: "student-6",
-    name: "Laila Bensouda",
-    grades: {
-      control: null as number | null,
-      project: null as number | null,
-      finalExam: null as number | null,
-    },
-  },
-  {
-    id: "student-7",
-    name: "Karim Idrissi",
-    grades: {
-      control: null as number | null,
-      project: null as number | null,
-      finalExam: null as number | null,
-    },
-  },
-  {
-    id: "student-8",
-    name: "Nadia Tazi",
-    grades: {
-      control: null as number | null,
-      project: null as number | null,
-      finalExam: null as number | null,
-    },
-  },
-  {
-    id: "student-9",
-    name: "Omar Benjelloun",
-    grades: {
-      control: null as number | null,
-      project: null as number | null,
-      finalExam: null as number | null,
-    },
-  },
-  {
-    id: "student-10",
-    name: "Salma Bakkali",
-    grades: {
-      control: null as number | null,
-      project: null as number | null,
-      finalExam: null as number | null,
-    },
-  },
-  {
-    id: "student-11",
-    name: "Mehdi Chraibi",
-    grades: {
-      control: null as number | null,
-      project: null as number | null,
-      finalExam: null as number | null,
-    },
-  },
-  {
-    id: "student-12",
-    name: "Amina Fassi",
-    grades: {
-      control: null as number | null,
-      project: null as number | null,
-      finalExam: null as number | null,
-    },
-  },
-  {
-    id: "student-13",
-    name: "Younes Berrada",
-    grades: {
-      control: null as number | null,
-      project: null as number | null,
-      finalExam: null as number | null,
-    },
-  },
-  {
-    id: "student-14",
-    name: "Hajar Mansouri",
-    grades: {
-      control: null as number | null,
-      project: null as number | null,
-      finalExam: null as number | null,
-    },
-  },
-  {
-    id: "student-15",
-    name: "Zakaria Bouali",
-    grades: {
-      control: null as number | null,
-      project: null as number | null,
-      finalExam: null as number | null,
-    },
-  },
+// Mock student list - in real app this would come from the database
+const mockStudentListForSession = [
+  { id: "student-1", name: "Rachid IMOURIGUE" },
+  { id: "student-2", name: "Mohamed HAJJI" },
+  { id: "student-3", name: "Ayoub Marghad" },
+  { id: "student-4", name: "Fatima Zahra" },
+  { id: "student-5", name: "Yassine Alami" },
+  { id: "student-6", name: "Laila Bensouda" },
+  { id: "student-7", name: "Karim Idrissi" },
+  { id: "student-8", name: "Nadia Tazi" },
+  { id: "student-9", name: "Omar Benjelloun" },
+  { id: "student-10", name: "Salma Bakkali" },
+  { id: "student-11", name: "Mehdi Chraibi" },
+  { id: "student-12", name: "Amina Fassi" },
+  { id: "student-13", name: "Younes Berrada" },
+  { id: "student-14", name: "Hajar Mansouri" },
+  { id: "student-15", name: "Zakaria Bouali" },
+  { id: "student-16", name: "Soukaina Alaoui" },
+  { id: "student-17", name: "Hamza Bennani" },
+  { id: "student-18", name: "Imane Chaoui" },
+  { id: "student-19", name: "Youssef Lahrichi" },
+  { id: "student-20", name: "Zineb Moussaoui" },
+  { id: "student-21", name: "Adil Tahiri" },
+  { id: "student-22", name: "Houda Ziani" },
+  { id: "student-23", name: "Khalid Ouazzani" },
+  { id: "student-24", name: "Samira Doukkali" },
+  { id: "student-25", name: "Tarik El Amrani" },
 ];
 
-const majors = [
-  { id: "CS", name: "Computer Science" },
-  { id: "ENG", name: "Engineering" },
-  { id: "BUS", name: "Business" },
-  { id: "PH", name: "Physics" },
-];
-
-const modulesByMajor = {
-  CS: [
-    { id: "CS305", name: "Operating Systems" },
-    { id: "CS301", name: "Advanced Algorithms" },
-    { id: "CS302", name: "Database Systems" },
-    { id: "CS303", name: "Software Engineering" },
-  ],
-  ENG: [
-    { id: "ENG201", name: "Mechanical Engineering" },
-    { id: "ENG202", name: "Electrical Engineering" },
-    { id: "ENG203", name: "Civil Engineering" },
-  ],
-  BUS: [
-    { id: "BUS101", name: "Business Management" },
-    { id: "BUS102", name: "Marketing" },
-    { id: "BUS103", name: "Finance" },
-  ],
-  PH: [
-    { id: "PH210", name: "Quantum Physics" },
-    { id: "PH211", name: "Classical Mechanics" },
-    { id: "PH212", name: "Thermodynamics" },
-  ],
+type StudentGradeRecord = {
+  id: string;
+  name: string;
+  grades: {
+    control: number | null;
+    project: number | null;
+    finalExam: number | null;
+  };
 };
 
 export const TeacherGrading: FC = () => {
-  const [selectedMajor, setSelectedMajor] = useState("");
-  const [selectedModule, setSelectedModule] = useState("");
+  const { teacher } = useTeacher();
+  const [selectedModuleInstance, setSelectedModuleInstance] = useState("");
+  const [students, setStudents] = useState<StudentGradeRecord[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const [weights, setWeights] = useState({
     control: 30,
     project: 20,
@@ -185,13 +68,43 @@ export const TeacherGrading: FC = () => {
     project: 20,
     finalExam: 50,
   });
-  const [grades, setGrades] = useState(mockStudents);
-  const [isEditing, setIsEditing] = useState(false);
-  const [tempGrades, setTempGrades] = useState(mockStudents);
-  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [tempGrades, setTempGrades] = useState<StudentGradeRecord[]>([]);
   const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
 
-  const availableModules = selectedMajor ? modulesByMajor[selectedMajor as keyof typeof modulesByMajor] || [] : [];
+  // Get teacher's module instances
+  const teacherModuleInstances = useMemo(() => {
+    if (!teacher) return [];
+    return getModuleInstancesByTeacher(teacher.keycloakId);
+  }, [teacher]);
+
+  // Get current semester
+  const currentSemester = useMemo(() => {
+    return semesters.find(semester => semester.isActive);
+  }, []);
+
+  // Filter module instances for current semester
+  const currentModuleInstances = useMemo(() => {
+    if (!currentSemester) return [];
+    return teacherModuleInstances.filter(instance => instance.semesterId === currentSemester.id);
+  }, [teacherModuleInstances, currentSemester]);
+
+  // Get available modules with major information
+  const availableModules = useMemo(() => {
+    return currentModuleInstances.map(instance => {
+      const module = getModuleById(instance.moduleId);
+      const major = module ? getMajorById(module.majorId) : null;
+      return {
+        id: instance.id,
+        moduleId: instance.moduleId,
+        moduleName: module?.name || 'Unknown Module',
+        moduleCode: module?.code || 'Unknown',
+        majorName: major?.name || 'Unknown Major',
+        majorCode: major?.code || 'Unknown',
+        semesterId: instance.semesterId,
+        isActive: instance.isActive
+      };
+    });
+  }, [currentModuleInstances]);
 
   const totalWeight = useMemo(
     () => weights.control + weights.project + weights.finalExam,
@@ -203,88 +116,53 @@ export const TeacherGrading: FC = () => {
     [tempWeights]
   );
 
-  // Check if all grades are filled
   const areAllGradesFilled = useMemo(() => {
-    const gradesToCheck = isEditing ? tempGrades : grades;
-    return gradesToCheck.every(student => 
+    return students.every(student => 
       student.grades.control !== null && 
       student.grades.project !== null && 
       student.grades.finalExam !== null
     );
-  }, [isEditing, tempGrades, grades]);
+  }, [students]);
 
-  // Check if submission is allowed (weights = 100% and all grades filled)
   const canSubmit = useMemo(() => {
-    const currentTotalWeight = isEditing ? tempTotalWeight : totalWeight;
-    return currentTotalWeight === 100 && areAllGradesFilled;
-  }, [isEditing, tempTotalWeight, totalWeight, areAllGradesFilled]);
+    return areAllGradesFilled && tempTotalWeight === 100;
+  }, [areAllGradesFilled, tempTotalWeight]);
 
-  // Load grades and weights from localStorage when component mounts or when major/module changes
-  useEffect(() => {
-    if (selectedMajor && selectedModule) {
-      const storageKey = `grades_${selectedMajor}_${selectedModule}`;
-      const submittedKey = `submitted_${selectedMajor}_${selectedModule}`;
-      const savedData = localStorage.getItem(storageKey);
-      const submittedStatus = localStorage.getItem(submittedKey);
+  const handleModuleChange = (moduleInstanceId: string) => {
+    setSelectedModuleInstance(moduleInstanceId);
+    setStudents([]); // Clear students
+    setIsSubmitted(false);
+    setIsEditing(false);
+  };
+
+  const handleLoadStudents = () => {
+    if (selectedModuleInstance) {
+      setIsLoading(true);
       
-      if (savedData) {
-        try {
-          const parsedData = JSON.parse(savedData);
-          setGrades(parsedData.grades || mockStudents);
-          setTempGrades(parsedData.grades || mockStudents);
-          setWeights(parsedData.weights || { control: 30, project: 20, finalExam: 50 });
-          setTempWeights(parsedData.weights || { control: 30, project: 20, finalExam: 50 });
-        } catch (error) {
-          console.error('Error loading data from localStorage:', error);
+      // Load fresh student list with no default grades
+      const freshStudents = mockStudentListForSession.map(student => ({
+        ...student,
+        grades: {
+          control: null,
+          project: null,
+          finalExam: null,
         }
-      } else {
-        // Initialize with mock data if no saved data exist
-        setGrades(mockStudents);
-        setTempGrades(mockStudents);
-        setWeights({ control: 30, project: 20, finalExam: 50 });
-        setTempWeights({ control: 30, project: 20, finalExam: 50 });
-      }
+      }));
+      setStudents(freshStudents);
+      setTempGrades(freshStudents);
+      setIsSubmitted(false);
+      setIsEditing(false);
       
-      // Check if already submitted
-      setIsSubmitted(submittedStatus === 'true');
+      setIsLoading(false);
     }
-  }, [selectedMajor, selectedModule]);
-
-  // Save grades and weights to localStorage
-  const saveDataToStorage = (gradesToSave: typeof grades, weightsToSave: typeof weights) => {
-    if (selectedMajor && selectedModule) {
-      const storageKey = `grades_${selectedMajor}_${selectedModule}`;
-      const dataToSave = {
-        grades: gradesToSave,
-        weights: weightsToSave
-      };
-      localStorage.setItem(storageKey, JSON.stringify(dataToSave));
-    }
-  };
-
-  const handleMajorChange = (majorId: string) => {
-    setSelectedMajor(majorId);
-    setSelectedModule(""); // Reset module selection when major changes
-    setIsEditing(false); // Exit edit mode when changing major
-    setIsSubmitted(false); // Reset submitted status
-  };
-
-  const handleModuleChange = (moduleId: string) => {
-    setSelectedModule(moduleId);
-    setIsEditing(false); // Exit edit mode when changing module
-    setIsSubmitted(false); // Reset submitted status
   };
 
   const handleWeightChange = (type: keyof typeof weights, value: string) => {
-    if (isSubmitted) return; // Prevent changes if submitted
-    const numValue = value === "" ? 0 : parseInt(value, 10);
-    if (!isNaN(numValue) && numValue >= 0 && numValue <= 100) {
-      if (isEditing) {
-        setTempWeights((prev) => ({ ...prev, [type]: numValue }));
-      } else {
-        setWeights((prev) => ({ ...prev, [type]: numValue }));
-      }
-    }
+    const numValue = parseInt(value) || 0;
+    setTempWeights(prev => ({
+      ...prev,
+      [type]: numValue
+    }));
   };
 
   const handleGradeChange = (
@@ -292,36 +170,39 @@ export const TeacherGrading: FC = () => {
     type: "control" | "project" | "finalExam",
     value: string
   ) => {
-    if (isSubmitted) return; // Prevent changes if submitted
-    const score =
-      value === "" ? null : Math.min(Math.max(parseFloat(value), 0), 20);
-    setTempGrades((prev) =>
-      prev.map((s) =>
-        s.id === studentId
-          ? { ...s, grades: { ...s.grades, [type]: score } }
-          : s
+    const numValue = value === "" ? null : parseFloat(value);
+    setTempGrades(prev =>
+      prev.map(student =>
+        student.id === studentId
+          ? {
+              ...student,
+              grades: {
+                ...student.grades,
+                [type]: numValue
+              }
+            }
+          : student
       )
     );
   };
 
   const handleEditClick = () => {
-    if (isSubmitted) return; // Prevent editing if submitted
     setIsEditing(true);
-    setTempGrades([...grades]); // Copy current grades to temp
-    setTempWeights({ ...weights }); // Copy current weights to temp
+    setTempGrades([...students]);
+    setTempWeights({ ...weights });
   };
 
   const handleCancelEdit = () => {
     setIsEditing(false);
-    setTempGrades([...grades]); // Reset temp grades to current grades
-    setTempWeights({ ...weights }); // Reset temp weights to current weights
+    setTempGrades([...students]);
+    setTempWeights({ ...weights });
   };
 
   const handleSaveGrades = () => {
-    setGrades([...tempGrades]);
-    setWeights({ ...tempWeights });
-    saveDataToStorage(tempGrades, tempWeights);
+    setStudents(tempGrades);
+    setWeights(tempWeights);
     setIsEditing(false);
+    alert("Grades saved successfully!");
   };
 
   const handleSubmitToAdmin = () => {
@@ -330,12 +211,8 @@ export const TeacherGrading: FC = () => {
 
   const confirmSubmitToAdmin = () => {
     setIsSubmitted(true);
-    setIsEditing(false);
-    if (selectedMajor && selectedModule) {
-      const submittedKey = `submitted_${selectedMajor}_${selectedModule}`;
-      localStorage.setItem(submittedKey, 'true');
-    }
     setShowSubmitConfirm(false);
+    alert("Grades submitted to administration successfully!");
   };
 
   const cancelSubmitToAdmin = () => {
@@ -364,7 +241,16 @@ export const TeacherGrading: FC = () => {
     return final.toFixed(2);
   };
 
-  const showGradeForms = selectedMajor && selectedModule;
+  const selectedModuleData = availableModules.find(m => m.id === selectedModuleInstance);
+
+  // Show loading if teacher is not loaded
+  if (!teacher) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -373,74 +259,47 @@ export const TeacherGrading: FC = () => {
         description="Set grade weights and enter scores for your students."
       />
 
-      {/* Major and Module Selection */}
-      <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
-        <h3 className="text-lg font-semibold mb-4 flex items-center">
-          <BookOpen className="mr-2 h-5 w-5" /> Course Selection
+      {/* Module Selection */}
+      <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md space-y-4">
+        <h3 className="text-lg font-semibold text-gray-800 dark:text-white">
+          Select a Module
         </h3>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Major Selection */}
-          <div>
-            <label
-              htmlFor="major-select"
-              className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300"
-            >
-              Select Major
-            </label>
-            <select
-              id="major-select"
-              value={selectedMajor}
-              onChange={(e) => handleMajorChange(e.target.value)}
-              className="w-full input-style"
-            >
-              <option value="">Choose a major...</option>
-              {majors.map((major) => (
-                <option key={major.id} value={major.id}>
-                  {major.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
           {/* Module Selection */}
           <div>
             <label
               htmlFor="module-select"
-              className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300"
+              className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300"
             >
-              Select Module
+              Current Teaching Module
             </label>
             <select
               id="module-select"
-              value={selectedModule}
+              value={selectedModuleInstance}
               onChange={(e) => handleModuleChange(e.target.value)}
-              disabled={!selectedMajor}
-              className="w-full input-style disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full input-style"
             >
-              <option value="">
-                {selectedMajor ? "Choose a module..." : "Select major first"}
-              </option>
+              <option value="">-- Choose a module --</option>
               {availableModules.map((module) => (
                 <option key={module.id} value={module.id}>
-                  {module.name}
+                  {module.moduleName} ({module.majorName})
                 </option>
               ))}
             </select>
           </div>
-        </div>
 
-        {!showGradeForms && (
-          <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md">
-            <p className="text-sm text-blue-700 dark:text-blue-300">
-              Please select both a major and module to proceed with grading.
-            </p>
-          </div>
-        )}
+          <button
+            onClick={handleLoadStudents}
+            disabled={!selectedModuleInstance || isLoading}
+            className="btn-primary md:w-auto w-full disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isLoading ? "Loading..." : "Load Student List"}
+          </button>
+        </div>
       </div>
 
       {/* Weight Configuration - Only show after module selection */}
-      {selectedModule && (
+      {selectedModuleInstance && students.length > 0 && (
         <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
           <h3 className="text-lg font-semibold mb-4 flex items-center">
             <Percent className="mr-2 h-5 w-5" /> Grade Weighting Configuration
@@ -517,13 +376,13 @@ export const TeacherGrading: FC = () => {
         </div>
       )}
 
-      {/* Grade Forms - Only show after both major and module are selected */}
-      {showGradeForms && (
+      {/* Grade Forms - Only show after module is selected and students loaded */}
+      {selectedModuleInstance && students.length > 0 && (
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden">
           <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
             <div>
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                Student Grades - {availableModules.find(m => m.id === selectedModule)?.name}
+                Student Grades - {selectedModuleData?.moduleName}
               </h3>
               <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                 {isSubmitted 
@@ -592,7 +451,7 @@ export const TeacherGrading: FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                {(isEditing ? tempGrades : grades).map((student) => {
+                {(isEditing ? tempGrades : students).map((student) => {
                   const finalGrade = calculateFinalGrade(student.grades);
                   return (
                     <tr
@@ -745,6 +604,18 @@ export const TeacherGrading: FC = () => {
         .dark .input-style:focus {
           border-color: #60a5fa;
           box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.1);
+        }
+        .btn-primary {
+          display: inline-flex;
+          align-items: center;
+          padding: 0.5rem 1rem;
+          border: 1px solid transparent;
+          border-radius: 0.375rem;
+          font-size: 0.875rem;
+          font-weight: 500;
+          color: white;
+          background-color: #2563eb;
+          cursor: pointer;
         }
       `}</style>
     </div>
