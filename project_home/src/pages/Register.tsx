@@ -1,19 +1,7 @@
-// --- START OF FILE Register.tsx ---
-// MODIFIED FOR FRONTEND-ONLY SIMULATION
-
 import { FC, useState } from "react";
-import {
-  School,
-  ArrowLeft,
-  ArrowRight,
-  User,
-  Mail,
-  Lock,
-  GraduationCap,
-} from "lucide-react";
+import { School, ArrowLeft, ArrowRight } from "lucide-react";
 import { HomeFooter } from "../components/layout/HomeFooter";
 import { useRouter } from "next/navigation";
-import { api } from "../utils/api";
 
 // Registration Progress Component
 interface RegistrationProgressProps {
@@ -32,13 +20,13 @@ const RegistrationProgress: FC<RegistrationProgressProps> = ({
           Step {currentStep} of {totalSteps}
         </h3>
         <span className="text-sm text-gray-500 dark:text-gray-400">
-          {Math.round(((currentStep - 1) / totalSteps) * 100)}% Complete
+          {Math.round((currentStep / totalSteps) * 100)}% Complete
         </span>
       </div>
       <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
         <div
           className="bg-blue-600 h-2.5 rounded-full transition-all duration-300 ease-in-out"
-          style={{ width: `${((currentStep - 1) / totalSteps) * 100}%` }}
+          style={{ width: `${(currentStep / totalSteps) * 100}%` }}
         ></div>
       </div>
     </div>
@@ -48,16 +36,18 @@ const RegistrationProgress: FC<RegistrationProgressProps> = ({
 export const Register: FC = () => {
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const router = useRouter();
 
+  // Form state
   const [formData, setFormData] = useState({
+    // Personal Info
     firstName: "",
     lastName: "",
     dateOfBirth: "",
     gender: "",
     nationality: "",
+
+    // Contact Info
     emailAddress: "",
     phoneNumber: "",
     country: "",
@@ -65,23 +55,34 @@ export const Register: FC = () => {
     city: "",
     stateOrProvince: "",
     postalCode: "",
+
+    // Account Info
     username: "",
     password: "",
     confirmPassword: "",
+
+    // Educational Info
     institutionName: "",
     major: "",
     educationLevel: "",
     institutionAddress: "",
     additionalInformation: "",
+
+    // Emergency Contact
     emergencyContactName: "",
     emergencyContactPhone: "",
     emergencyContactRelationship: "",
   });
 
-  const totalSteps = 4;
+  const totalSteps = 5;
 
-  const nextStep = () => setStep((prev) => Math.min(prev + 1, totalSteps));
-  const prevStep = () => setStep((prev) => Math.max(prev - 1, 1));
+  const nextStep = () => {
+    setStep((prev) => Math.min(prev + 1, totalSteps));
+  };
+
+  const prevStep = () => {
+    setStep((prev) => Math.max(prev - 1, 1));
+  };
 
   const handleChange = (
     e: React.ChangeEvent<
@@ -92,354 +93,562 @@ export const Register: FC = () => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  // Real API call instead of simulation
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (formData.password !== formData.confirmPassword) {
-      setError("Passwords do not match.");
-      return;
-    }
-
     setIsSubmitting(true);
-    setError(null);
-    setSuccessMessage(null);
 
     try {
-      // Call the real API endpoint
-      const response = await api.post("/students/signup", {
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        dateOfBirth: formData.dateOfBirth,
-        gender: formData.gender,
-        nationality: formData.nationality,
-        emailAddress: formData.emailAddress,
-        phoneNumber: formData.phoneNumber,
-        country: formData.country,
-        streetAddress: formData.streetAddress,
-        city: formData.city,
-        stateOrProvince: formData.stateOrProvince,
-        postalCode: formData.postalCode,
-        username: formData.username,
-        password: formData.password,
-        confirmPassword: formData.confirmPassword,
-        institutionName: formData.institutionName,
-        major: formData.major,
-        educationLevel: formData.educationLevel,
-        institutionAddress: formData.institutionAddress,
-        additionalInformation: formData.additionalInformation || null,
-        emergencyContactName: formData.emergencyContactName,
-        emergencyContactPhone: formData.emergencyContactPhone,
-        emergencyContactRelationship: formData.emergencyContactRelationship,
+      // Call the student registration API endpoint
+      const response = await fetch("/api/auth/students/signup", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData),
       });
 
-      setSuccessMessage(
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(
+          errorData.message || "Registration failed. Please try again."
+        );
+      }
+
+      alert(
         "Registration successful! Please check your email to verify your account."
       );
 
-      // Redirect to login page after showing success message
-      setTimeout(() => router.push("/login"), 3000);
-    } catch (err: any) {
-      console.error("Registration error:", err);
-
-      // Handle different types of errors
-      if (err.status === 409) {
-        setError(
-          "Username or email already exists. Please try different credentials."
-        );
-      } else if (err.status === 400) {
-        // Extract validation errors if available
-        const errorData = err.data;
-        if (errorData?.validationErrors) {
-          const errorMessages = Object.values(errorData.validationErrors).join(
-            ", "
-          );
-          setError(`Validation failed: ${errorMessages}`);
-        } else {
-          setError(
-            errorData?.message ||
-              "Invalid input data. Please check your entries."
-          );
-        }
-      } else {
-        setError(err.message || "Registration failed. Please try again.");
-      }
+      // Redirect to login page
+      setTimeout(() => {
+        window.location.href = "/login";
+      }, 2000);
+    } catch (error) {
+      console.error("Registration error:", error);
+      alert(
+        error instanceof Error ? error.message : "An unknown error occurred"
+      );
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleNavigate = (route: string) =>
-    router.push(route === "home" ? "/" : "/");
-
-  const renderStep = () => {
-    switch (step) {
-      case 1:
-        return (
-          <div className="space-y-4">
-            <h3 className="text-lg font-medium text-gray-900 dark:text-white flex items-center">
-              <User className="mr-2 h-5 w-5" />
-              Personal Information
-            </h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              Please provide your personal details.
-            </p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <input
-                name="firstName"
-                value={formData.firstName}
-                onChange={handleChange}
-                placeholder="First Name"
-                required
-                className="input-style"
-              />
-              <input
-                name="lastName"
-                value={formData.lastName}
-                onChange={handleChange}
-                placeholder="Last Name"
-                required
-                className="input-style"
-              />
-            </div>
-            <input
-              type="date"
-              name="dateOfBirth"
-              value={formData.dateOfBirth}
-              onChange={handleChange}
-              required
-              className="input-style"
-            />
-            <select
-              name="gender"
-              value={formData.gender}
-              onChange={handleChange}
-              required
-              className="input-style"
-            >
-              <option value="">Select Gender</option>
-              <option value="MALE">Male</option>
-              <option value="FEMALE">Female</option>
-            </select>
-            <input
-              name="nationality"
-              value={formData.nationality}
-              onChange={handleChange}
-              placeholder="Nationality"
-              required
-              className="input-style"
-            />
-          </div>
-        );
-      case 2:
-        return (
-          <div className="space-y-4">
-            <h3 className="text-lg font-medium text-gray-900 dark:text-white flex items-center">
-              <Mail className="mr-2 h-5 w-5" />
-              Contact & Address
-            </h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              How can we reach you?
-            </p>
-            <input
-              type="email"
-              name="emailAddress"
-              value={formData.emailAddress}
-              onChange={handleChange}
-              placeholder="Email Address (@emsi-etu.ma)"
-              required
-              pattern=".+@emsi-etu\.ma$"
-              title="Email must be a valid @emsi-etu.ma address."
-              className="input-style"
-            />
-            <input
-              type="tel"
-              name="phoneNumber"
-              value={formData.phoneNumber}
-              onChange={handleChange}
-              placeholder="Phone Number"
-              required
-              className="input-style"
-            />
-            <input
-              name="country"
-              value={formData.country}
-              onChange={handleChange}
-              placeholder="Country"
-              required
-              className="input-style"
-            />
-            <input
-              name="streetAddress"
-              value={formData.streetAddress}
-              onChange={handleChange}
-              placeholder="Street Address"
-              required
-              className="input-style"
-            />
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <input
-                name="city"
-                value={formData.city}
-                onChange={handleChange}
-                placeholder="City"
-                required
-                className="input-style"
-              />
-              <input
-                name="stateOrProvince"
-                value={formData.stateOrProvince}
-                onChange={handleChange}
-                placeholder="State/Province"
-                required
-                className="input-style"
-              />
-              <input
-                name="postalCode"
-                value={formData.postalCode}
-                onChange={handleChange}
-                placeholder="Postal Code"
-                required
-                className="input-style"
-              />
-            </div>
-          </div>
-        );
-      case 3:
-        return (
-          <div className="space-y-4">
-            <h3 className="text-lg font-medium text-gray-900 dark:text-white flex items-center">
-              <GraduationCap className="mr-2 h-5 w-5" />
-              Academic Information
-            </h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              Tell us about your studies.
-            </p>
-            <input
-              name="institutionName"
-              value={formData.institutionName}
-              onChange={handleChange}
-              placeholder="Institution Name"
-              required
-              className="input-style"
-            />
-            <select
-              name="major"
-              value={formData.major}
-              onChange={handleChange}
-              required
-              className="input-style"
-            >
-              <option value="">Select Major</option>
-              <option value="COMPUTER_SCIENCE">Computer Science</option>
-              <option value="ENGINEERING">Engineering</option>
-              <option value="BUSINESS">Business</option>
-              <option value="OTHER">Other</option>
-            </select>
-            <select
-              name="educationLevel"
-              value={formData.educationLevel}
-              onChange={handleChange}
-              required
-              className="input-style"
-            >
-              <option value="">Select Education Level</option>
-              <option value="BACHELOR">Bachelor</option>
-              <option value="MASTER">Master</option>
-              <option value="PHD">PhD</option>
-              <option value="OTHER">Other</option>
-            </select>
-            <input
-              name="institutionAddress"
-              value={formData.institutionAddress}
-              onChange={handleChange}
-              placeholder="Institution Address"
-              required
-              className="input-style"
-            />
-            <textarea
-              name="additionalInformation"
-              value={formData.additionalInformation}
-              onChange={handleChange}
-              placeholder="Additional Information (Optional)"
-              rows={3}
-              className="input-style"
-            />
-
-            {/* Emergency Contact */}
-            <div className="border-t pt-4">
-              <h4 className="font-medium mb-3">Emergency Contact</h4>
-              <input
-                name="emergencyContactName"
-                value={formData.emergencyContactName}
-                onChange={handleChange}
-                placeholder="Emergency Contact Name"
-                required
-                className="input-style"
-              />
-              <input
-                name="emergencyContactPhone"
-                value={formData.emergencyContactPhone}
-                onChange={handleChange}
-                placeholder="Emergency Contact Phone"
-                required
-                className="input-style"
-              />
-              <input
-                name="emergencyContactRelationship"
-                value={formData.emergencyContactRelationship}
-                onChange={handleChange}
-                placeholder="Relationship (e.g., Parent, Guardian)"
-                required
-                className="input-style"
-              />
-            </div>
-          </div>
-        );
-      case 4:
-        return (
-          <div className="space-y-4">
-            <h3 className="text-lg font-medium text-gray-900 dark:text-white flex items-center">
-              <Lock className="mr-2 h-5 w-5" />
-              Account Credentials
-            </h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              Create your secure login credentials.
-            </p>
-            <input
-              name="username"
-              value={formData.username}
-              onChange={handleChange}
-              placeholder="Username"
-              required
-              className="input-style"
-            />
-            <input
-              type="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              placeholder="Password"
-              required
-              pattern="^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*]).{8,}$"
-              title="Password must be at least 8 characters and include uppercase, lowercase, number, and a special character."
-              className="input-style"
-            />
-            <input
-              type="password"
-              name="confirmPassword"
-              value={formData.confirmPassword}
-              onChange={handleChange}
-              placeholder="Confirm Password"
-              required
-              className="input-style"
-            />
-          </div>
-        );
+  const handleNavigate = (route: string) => {
+    switch (route) {
+      case "home":
+        router.push("/");
+        break;
       default:
-        return null;
+        router.push("/");
     }
   };
+
+  const renderPersonalInfoStep = () => (
+    <div className="space-y-4">
+      <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+        Personal Information
+      </h3>
+      <p className="text-sm text-gray-500 dark:text-gray-400">
+        Please provide your personal details
+      </p>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label
+            htmlFor="firstName"
+            className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+          >
+            First Name
+          </label>
+          <input
+            type="text"
+            id="firstName"
+            name="firstName"
+            value={formData.firstName}
+            onChange={handleChange}
+            required
+            className="mt-1 block w-full border border-gray-300 dark:border-gray-700 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white"
+          />
+        </div>
+
+        <div>
+          <label
+            htmlFor="lastName"
+            className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+          >
+            Last Name
+          </label>
+          <input
+            type="text"
+            id="lastName"
+            name="lastName"
+            value={formData.lastName}
+            onChange={handleChange}
+            required
+            className="mt-1 block w-full border border-gray-300 dark:border-gray-700 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white"
+          />
+        </div>
+      </div>
+
+      <div>
+        <label
+          htmlFor="dateOfBirth"
+          className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+        >
+          Date of Birth
+        </label>
+        <input
+          type="date"
+          id="dateOfBirth"
+          name="dateOfBirth"
+          value={formData.dateOfBirth}
+          onChange={handleChange}
+          max={(() => {
+            const date = new Date();
+            date.setFullYear(date.getFullYear() - 16);
+            return date.toISOString().split("T")[0];
+          })()}
+          required
+          className="mt-1 block w-full border border-gray-300 dark:border-gray-700 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white"
+        />
+        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+          You must be at least 16 years old to register.
+        </p>
+      </div>
+
+      <div>
+        <label
+          htmlFor="gender"
+          className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+        >
+          Gender
+        </label>
+        <select
+          id="gender"
+          name="gender"
+          value={formData.gender}
+          onChange={handleChange}
+          className="mt-1 block w-full border border-gray-300 dark:border-gray-700 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white"
+        >
+          <option value="">Select gender</option>
+          <option value="MALE">Male</option>
+          <option value="FEMALE">Female</option>
+        </select>
+      </div>
+
+      <div>
+        <label
+          htmlFor="nationality"
+          className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+        >
+          Nationality
+        </label>
+        <input
+          type="text"
+          id="nationality"
+          name="nationality"
+          value={formData.nationality}
+          onChange={handleChange}
+          className="mt-1 block w-full border border-gray-300 dark:border-gray-700 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white"
+        />
+      </div>
+    </div>
+  );
+
+  const renderContactInfoStep = () => (
+    <div className="space-y-4">
+      <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+        Contact Information
+      </h3>
+      <p className="text-sm text-gray-500 dark:text-gray-400">
+        How can we reach you?
+      </p>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label
+            htmlFor="emailAddress"
+            className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+          >
+            Email Address
+          </label>
+          <input
+            type="email"
+            id="emailAddress"
+            name="emailAddress"
+            value={formData.emailAddress}
+            onChange={handleChange}
+            pattern="[a-zA-Z0-9._%+-]+@gmail\.com$"
+            required
+            className="mt-1 block w-full border border-gray-300 dark:border-gray-700 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white"
+          />
+          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            Must be a valid Gmail address (@gmail.com)
+          </p>
+        </div>
+
+        <div>
+          <label
+            htmlFor="phoneNumber"
+            className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+          >
+            Phone Number
+          </label>
+          <input
+            type="tel"
+            id="phoneNumber"
+            name="phoneNumber"
+            value={formData.phoneNumber}
+            onChange={handleChange}
+            pattern="^[+]?[0-9\s\-()]{7,20}$"
+            placeholder="+1234567890 or (123) 456-7890"
+            className="mt-1 block w-full border border-gray-300 dark:border-gray-700 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white"
+          />
+        </div>
+      </div>
+
+      <div>
+        <label
+          htmlFor="country"
+          className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+        >
+          Country
+        </label>
+        <input
+          type="text"
+          id="country"
+          name="country"
+          value={formData.country}
+          onChange={handleChange}
+          className="mt-1 block w-full border border-gray-300 dark:border-gray-700 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white"
+        />
+      </div>
+
+      <div>
+        <label
+          htmlFor="streetAddress"
+          className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+        >
+          Street Address
+        </label>
+        <input
+          type="text"
+          id="streetAddress"
+          name="streetAddress"
+          value={formData.streetAddress}
+          onChange={handleChange}
+          className="mt-1 block w-full border border-gray-300 dark:border-gray-700 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white"
+        />
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div>
+          <label
+            htmlFor="city"
+            className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+          >
+            City
+          </label>
+          <input
+            type="text"
+            id="city"
+            name="city"
+            value={formData.city}
+            onChange={handleChange}
+            className="mt-1 block w-full border border-gray-300 dark:border-gray-700 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white"
+          />
+        </div>
+
+        <div>
+          <label
+            htmlFor="stateOrProvince"
+            className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+          >
+            State/Province
+          </label>
+          <input
+            type="text"
+            id="stateOrProvince"
+            name="stateOrProvince"
+            value={formData.stateOrProvince}
+            onChange={handleChange}
+            className="mt-1 block w-full border border-gray-300 dark:border-gray-700 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white"
+          />
+        </div>
+
+        <div>
+          <label
+            htmlFor="postalCode"
+            className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+          >
+            Postal Code
+          </label>
+          <input
+            type="text"
+            id="postalCode"
+            name="postalCode"
+            value={formData.postalCode}
+            onChange={handleChange}
+            pattern="^[A-Za-z0-9\s\-]{3,20}$"
+            className="mt-1 block w-full border border-gray-300 dark:border-gray-700 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white"
+          />
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderAccountInfoStep = () => (
+    <div className="space-y-4">
+      <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+        Account Information
+      </h3>
+      <p className="text-sm text-gray-500 dark:text-gray-400">
+        Create your login credentials
+      </p>
+
+      <div>
+        <label
+          htmlFor="username"
+          className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+        >
+          Username
+        </label>
+        <input
+          type="text"
+          id="username"
+          name="username"
+          value={formData.username}
+          onChange={handleChange}
+          pattern="^[a-zA-Z0-9._-]{3,50}$"
+          required
+          className="mt-1 block w-full border border-gray-300 dark:border-gray-700 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white"
+        />
+        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+          3-50 characters. Only letters, numbers, dots, underscores, and hyphens
+          allowed.
+        </p>
+      </div>
+
+      <div>
+        <label
+          htmlFor="password"
+          className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+        >
+          Password
+        </label>
+        <input
+          type="password"
+          id="password"
+          name="password"
+          value={formData.password}
+          onChange={handleChange}
+          pattern="^(?=.[a-z])(?=.[A-Z])(?=.[0-9])(?=.[!@#$%^&*]).{8,128}$"
+          required
+          className="mt-1 block w-full border border-gray-300 dark:border-gray-700 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white"
+        />
+        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+          Password must be 8-128 characters and include: uppercase letter,
+          lowercase letter, number, and special character.
+        </p>
+      </div>
+
+      <div>
+        <label
+          htmlFor="confirmPassword"
+          className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+        >
+          Confirm Password
+        </label>
+        <input
+          type="password"
+          id="confirmPassword"
+          name="confirmPassword"
+          value={formData.confirmPassword}
+          onChange={handleChange}
+          required
+          className="mt-1 block w-full border border-gray-300 dark:border-gray-700 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white"
+        />
+      </div>
+    </div>
+  );
+
+  const renderEducationalInfoStep = () => (
+    <div className="space-y-4">
+      <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+        Educational Information
+      </h3>
+      <p className="text-sm text-gray-500 dark:text-gray-400">
+        Tell us about your educational background
+      </p>
+
+      <div>
+        <label
+          htmlFor="institutionName"
+          className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+        >
+          Current/Previous Institution Name
+        </label>
+        <input
+          type="text"
+          id="institutionName"
+          name="institutionName"
+          value={formData.institutionName}
+          onChange={handleChange}
+          className="mt-1 block w-full border border-gray-300 dark:border-gray-700 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white"
+        />
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label
+            htmlFor="major"
+            className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+          >
+            Major/Field of Study
+          </label>
+          <select
+            id="major"
+            name="major"
+            value={formData.major}
+            onChange={handleChange}
+            className="mt-1 block w-full border border-gray-300 dark:border-gray-700 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white"
+          >
+            <option value="">Select major</option>
+            <option value="COMPUTER_SCIENCE">Computer Science</option>
+            <option value="ENGINEERING">Engineering</option>
+            <option value="BUSINESS">Business</option>
+            <option value="OTHER">Other</option>
+          </select>
+        </div>
+
+        <div>
+          <label
+            htmlFor="educationLevel"
+            className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+          >
+            Education Level
+          </label>
+          <select
+            id="educationLevel"
+            name="educationLevel"
+            value={formData.educationLevel}
+            onChange={handleChange}
+            className="mt-1 block w-full border border-gray-300 dark:border-gray-700 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white"
+          >
+            <option value="">Select level</option>
+            <option value="BACHELOR">Bachelor</option>
+            <option value="MASTER">Master</option>
+            <option value="PHD">PhD</option>
+            <option value="OTHER">Other</option>
+          </select>
+        </div>
+      </div>
+
+      <div>
+        <label
+          htmlFor="institutionAddress"
+          className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+        >
+          Institution Address
+        </label>
+        <input
+          type="text"
+          id="institutionAddress"
+          name="institutionAddress"
+          value={formData.institutionAddress}
+          onChange={handleChange}
+          className="mt-1 block w-full border border-gray-300 dark:border-gray-700 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white"
+        />
+      </div>
+
+      <div>
+        <label
+          htmlFor="additionalInformation"
+          className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+        >
+          Additional Information
+        </label>
+        <textarea
+          id="additionalInformation"
+          name="additionalInformation"
+          value={formData.additionalInformation}
+          onChange={handleChange}
+          rows={3}
+          className="mt-1 block w-full border border-gray-300 dark:border-gray-700 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white"
+        />
+      </div>
+    </div>
+  );
+
+  const renderEmergencyContactStep = () => (
+    <div className="space-y-4">
+      <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+        Emergency Contact
+      </h3>
+      <p className="text-sm text-gray-500 dark:text-gray-400">
+        Who should we contact in case of emergency?
+      </p>
+
+      <div>
+        <label
+          htmlFor="emergencyContactName"
+          className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+        >
+          Full Name
+        </label>
+        <input
+          type="text"
+          id="emergencyContactName"
+          name="emergencyContactName"
+          value={formData.emergencyContactName}
+          onChange={handleChange}
+          className="mt-1 block w-full border border-gray-300 dark:border-gray-700 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white"
+        />
+      </div>
+
+      <div>
+        <label
+          htmlFor="emergencyContactPhone"
+          className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+        >
+          Phone Number
+        </label>
+        <input
+          type="tel"
+          id="emergencyContactPhone"
+          name="emergencyContactPhone"
+          value={formData.emergencyContactPhone}
+          onChange={handleChange}
+          pattern="^[+]?[0-9\s\-()]{7,20}$"
+          placeholder="+1234567890 or (123) 456-7890"
+          className="mt-1 block w-full border border-gray-300 dark:border-gray-700 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white"
+        />
+      </div>
+
+      <div>
+        <label
+          htmlFor="emergencyContactRelationship"
+          className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+        >
+          Relationship
+        </label>
+        <select
+          id="emergencyContactRelationship"
+          name="emergencyContactRelationship"
+          value={formData.emergencyContactRelationship}
+          onChange={handleChange}
+          className="mt-1 block w-full border border-gray-300 dark:border-gray-700 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white"
+        >
+          <option value="">Select relationship</option>
+          <option value="Parent">Parent</option>
+          <option value="Guardian">Guardian</option>
+          <option value="Spouse">Spouse</option>
+          <option value="Sibling">Sibling</option>
+          <option value="Friend">Friend</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
+    </div>
+  );
 
   return (
     <div className="min-h-screen flex flex-col dark:bg-gray-900">
@@ -471,126 +680,98 @@ export const Register: FC = () => {
 
           <div className="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden">
             <RegistrationProgress currentStep={step} totalSteps={totalSteps} />
+
             <form onSubmit={handleSubmit}>
               <div className="px-6 py-8">
-                {error && (
-                  <div
-                    className="p-3 mb-4 text-sm text-red-700 bg-red-100 rounded-lg dark:bg-red-200 dark:text-red-800"
-                    role="alert"
-                  >
-                    {error}
-                  </div>
-                )}
-                {successMessage && (
-                  <div
-                    className="p-3 mb-4 text-sm text-green-700 bg-green-100 rounded-lg dark:bg-green-200 dark:text-green-800"
-                    role="alert"
-                  >
-                    {successMessage}
-                  </div>
-                )}
-                {!successMessage && renderStep()}
+                {step === 1 && renderPersonalInfoStep()}
+                {step === 2 && renderContactInfoStep()}
+                {step === 3 && renderAccountInfoStep()}
+                {step === 4 && renderEducationalInfoStep()}
+                {step === 5 && renderEmergencyContactStep()}
               </div>
 
-              {!successMessage && (
-                <div className="px-6 py-4 bg-gray-50 dark:bg-gray-800 border-t dark:border-gray-700 flex justify-between">
+              <div className="px-6 py-4 bg-gray-50 dark:bg-gray-800 border-t dark:border-gray-700 flex justify-between">
+                {step > 1 && (
                   <button
                     type="button"
                     onClick={prevStep}
-                    disabled={step === 1}
-                    className="btn-secondary disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 shadow-sm text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                   >
-                    <ArrowLeft className="mr-2 h-4 w-4" /> Previous
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    Previous
                   </button>
-                  {step < totalSteps ? (
-                    <button
-                      type="button"
-                      onClick={nextStep}
-                      className="btn-primary"
-                    >
-                      Next <ArrowRight className="ml-2 h-4 w-4" />
-                    </button>
-                  ) : (
-                    <button
-                      type="submit"
-                      disabled={isSubmitting}
-                      className="btn-primary disabled:opacity-50 disabled:cursor-wait"
-                    >
-                      {isSubmitting ? "Submitting..." : "Submit Registration"}
-                    </button>
-                  )}
-                </div>
-              )}
+                )}
+                {step < totalSteps ? (
+                  <button
+                    type="button"
+                    onClick={nextStep}
+                    className={`inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
+                      step === 1 ? "ml-auto" : ""
+                    }`}
+                  >
+                    Next
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </button>
+                ) : (
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <svg
+                          className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                        >
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                          ></circle>
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                          ></path>
+                        </svg>
+                        Submitting...
+                      </>
+                    ) : (
+                      "Submit Registration"
+                    )}
+                  </button>
+                )}
+              </div>
             </form>
+          </div>
+
+          <div className="text-center text-sm text-gray-500 dark:text-gray-400 mt-6">
+            <p>
+              By registering, you agree to our{" "}
+              <a
+                href="#"
+                className="font-medium text-blue-600 hover:underline dark:text-blue-400"
+              >
+                Terms of Service
+              </a>{" "}
+              and{" "}
+              <a
+                href="#"
+                className="font-medium text-blue-600 hover:underline dark:text-blue-400"
+              >
+                Privacy Policy
+              </a>
+            </p>
           </div>
         </div>
       </div>
       <HomeFooter />
-      <style jsx>{`
-        .input-style {
-          display: block;
-          width: 100%;
-          padding: 0.5rem 0.75rem;
-          font-size: 0.875rem;
-          line-height: 1.25rem;
-          border: 1px solid #d1d5db;
-          border-radius: 0.375rem;
-          box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-          outline: none;
-          transition: border-color 0.15s ease-in-out,
-            box-shadow 0.15s ease-in-out;
-        }
-        .dark .input-style {
-          background-color: #374151;
-          border-color: #4b5563;
-          color: #f9fafb;
-        }
-        .input-style:focus {
-          border-color: #3b82f6;
-          box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
-        }
-        .btn-primary {
-          display: inline-flex;
-          align-items: center;
-          padding: 0.5rem 1rem;
-          border: 1px solid transparent;
-          border-radius: 0.375rem;
-          font-size: 0.875rem;
-          font-weight: 500;
-          color: white;
-          background-color: #2563eb;
-          box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-          cursor: pointer;
-        }
-        .btn-primary:hover {
-          background-color: #1d4ed8;
-        }
-        .btn-secondary {
-          display: inline-flex;
-          align-items: center;
-          padding: 0.5rem 1rem;
-          border: 1px solid #d1d5db;
-          border-radius: 0.375rem;
-          font-size: 0.875rem;
-          font-weight: 500;
-          color: #374151;
-          background-color: white;
-          box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-          cursor: pointer;
-        }
-        .dark .btn-secondary {
-          background-color: #374151;
-          color: #f9fafb;
-          border-color: #4b5563;
-        }
-        .btn-secondary:hover {
-          background-color: #f9fafb;
-        }
-        .dark .btn-secondary:hover {
-          background-color: #4b5563;
-        }
-      `}</style>
     </div>
   );
 };
-// --- END OF FILE Register.tsx ---
