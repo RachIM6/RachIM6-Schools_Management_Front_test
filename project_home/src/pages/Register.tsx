@@ -199,6 +199,7 @@ export const Register: FC = () => {
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isSuccess, setIsSuccess] = useState(false);
   const router = useRouter();
 
   // Form state
@@ -313,30 +314,13 @@ export const Register: FC = () => {
     setIsSubmitting(true);
 
     try {
-      // Call the student registration API endpoint
-      const response = await fetch("/api/auth/students/signup", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(formData),
-      });
+      // Simulate API call with random delay between 1-2 seconds
+      const delay = Math.random() * 1000 + 1000; // Random delay between 1000-2000ms
+      
+      await new Promise(resolve => setTimeout(resolve, delay));
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(
-          errorData.message || "Registration failed. Please try again."
-        );
-      }
-
-      alert(
-        "Registration successful! Please check your email to verify your account."
-      );
-
-      // Redirect to login page
-      setTimeout(() => {
-        window.location.href = "/login";
-      }, 2000);
+      // Simulate successful registration
+      setIsSuccess(true);
     } catch (error) {
       console.error("Registration error:", error);
       setErrors({ error: error instanceof Error ? error.message : "An unknown error occurred" });
@@ -973,7 +957,75 @@ export const Register: FC = () => {
     </div>
   );
 
-  return (
+  const renderSuccessMessage = () => (
+    <div className="min-h-screen flex flex-col dark:bg-gray-900">
+      <div className="flex-grow flex flex-col items-center pt-16 pb-12 px-4 sm:px-6 lg:px-8 bg-gray-50 dark:bg-gray-900">
+        <div className="w-full max-w-md">
+          <div className="text-center mb-8">
+            <div
+              className="inline-flex items-center cursor-pointer"
+              onClick={() => handleNavigate("home")}
+            >
+              <School className="h-10 w-10 text-blue-600 dark:text-blue-400" />
+              <span className="ml-2 text-2xl font-bold dark:text-white">
+                EMSI-School
+              </span>
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden">
+            <div className="px-6 py-12 text-center">
+              {/* Success Icon */}
+              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 dark:bg-green-900 mb-4">
+                <svg
+                  className="h-6 w-6 text-green-600 dark:text-green-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M5 13l4 4L19 7"
+                  />
+                </svg>
+              </div>
+
+              {/* Success Title */}
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                Registration Successful!
+              </h3>
+
+              {/* Success Message */}
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+                Thank you for registering with EMSI-School. Please check your email to verify your account before signing in.
+              </p>
+
+              {/* Action Buttons */}
+              <div className="space-y-3">
+                <button
+                  onClick={() => window.location.href = "/login"}
+                  className="w-full inline-flex justify-center items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                >
+                  Go to Login
+                </button>
+                <button
+                  onClick={() => handleNavigate("home")}
+                  className="w-full inline-flex justify-center items-center px-4 py-2 border border-gray-300 dark:border-gray-600 shadow-sm text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                >
+                  Back to Home
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <HomeFooter />
+    </div>
+  );
+
+  return isSuccess ? renderSuccessMessage() : (
     <div className="min-h-screen flex flex-col dark:bg-gray-900">
       <div className="flex-grow flex flex-col items-center pt-16 pb-12 px-4 sm:px-6 lg:px-8 bg-gray-50 dark:bg-gray-900">
         <div className="w-full max-w-3xl">
@@ -1039,7 +1091,9 @@ export const Register: FC = () => {
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                    className={`inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
+                      isSubmitting ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-700'
+                    }`}
                   >
                     {isSubmitting ? (
                       <>
