@@ -110,7 +110,9 @@ export const StudentAttendance: FC = () => {
 
             <div className="w-full max-w-3xl mx-auto">
                 <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md">
-                    {Object.keys(attendanceData).map((year, yearIndex) => (
+                    {Object.keys(attendanceData)
+                      .sort((a, b) => b.localeCompare(a)) // Sort descending, newest/current first
+                      .map((year, yearIndex) => (
                         <Disclosure as="div" key={year}>
                             {({ open }) => (
                                 <div className={yearIndex > 0 ? "border-t border-gray-200 dark:border-gray-700" : ""}>
